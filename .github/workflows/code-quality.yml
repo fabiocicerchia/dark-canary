@@ -64,7 +64,7 @@ jobs:
       # Whatever input broke it is the only useful artifact of a failed run.
       - name: upload crashers
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-corpus
           path: internal/*/testdata/fuzz/
