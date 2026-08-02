@@ -1,0 +1,95 @@
+name: code-quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: build, vet & test (go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # go-version-file reads the toolchain directive in go.mod, so the patched
+      # stdlib is pinned in exactly one place.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: build
+        run: go build ./...
+      - name: vet
+        run: go vet ./...
+      # -race because the collector pairs requests from concurrent handlers.
+      - name: test
+        run: go test -race -coverprofile=coverage.out ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+
+  lua:
+    name: test (lua capture hook)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # The hook runs under OpenResty's LuaJIT (5.1); the tests stub ngx and the
+      # kit, so any 5.1-compatible interpreter exercises the same logic.
+      - uses: leafo/gh-actions-lua@v11
+        with:
+          luaVersion: "luajit-openresty"
+      - name: test
+        run: lua lua/dark_canary_test.lua
+
+  fuzz:
+    name: fuzz (smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      # A short run per target: enough to catch a regression a PR just
+      # introduced, not a substitute for a long soak. Seed corpora also run as
+      # ordinary tests in the job above, so a known crasher fails there first.
+      - name: fuzz diff bodies
+        run: >-
+          go test -run='^$' -fuzz=FuzzDiffBodies -fuzztime=60s
+          ./internal/diff/
+      - name: fuzz glob matching
+        run: >-
+          go test -run='^$' -fuzz=FuzzGlobMatching -fuzztime=60s
+          ./internal/noise/
+      # Whatever input broke it is the only useful artifact of a failed run.
+      - name: upload crashers
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-corpus
+          path: internal/*/testdata/fuzz/
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Lint the GitHub Actions workflows themselves.
+      - name: actionlint
+        uses: raven-actions/actionlint@v2
+
+      # Enforce .editorconfig (indentation, EOL, trailing whitespace).
+      - name: editorconfig-checker
+        uses: editorconfig-checker/action-editorconfig-checker@v2
+
+      # Catch common typos in code and docs.
+      - name: typos
+        uses: crate-ci/typos@master
+
+      # pre-commit runs the language-specific hooks defined in
+      # .pre-commit-config.yaml. It no-ops gracefully if none apply.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+      - name: pre-commit
+        uses: pre-commit/action@v3.0.1
