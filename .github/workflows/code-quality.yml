@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v7
       # The hook runs under OpenResty's LuaJIT (5.1); the tests stub ngx and the
       # kit, so any 5.1-compatible interpreter exercises the same logic.
-      - uses: leafo/gh-actions-lua@v11
+      - uses: leafo/gh-actions-lua@v13
         with:
           luaVersion: "luajit-openresty"
       - name: test
