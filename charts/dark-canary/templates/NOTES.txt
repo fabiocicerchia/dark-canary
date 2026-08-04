@@ -1,0 +1,29 @@
+{{ include "dark-canary.fullname" . }} is installed.
+
+{{ if .Values.proxy.enabled -}}
+Traffic:  send it to {{ include "dark-canary.fullname" . }}:{{ .Values.service.proxyPort }}
+          → answered by {{ .Values.proxy.primary }}
+          → {{ .Values.proxy.sample }} of eligible requests mirrored to {{ .Values.proxy.shadow }}
+{{- else -}}
+Collector mode: no proxying. Point an edge at
+POST http://{{ include "dark-canary.fullname" . }}:{{ .Values.service.collectorPort }}/captures
+{{- end }}
+
+Dashboard and report — the collector port is not in the Service by default:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "dark-canary.fullname" . }} {{ .Values.service.collectorPort }}:{{ .Values.service.collectorPort }}
+
+  TOKEN=$(kubectl -n {{ .Release.Namespace }} get secret {{ include "dark-canary.secretName" . }} -o jsonpath='{.data.token}' | base64 -d)
+  open "http://127.0.0.1:{{ .Values.service.collectorPort }}/#token=$TOKEN"
+
+  curl -H "X-Dark-Canary-Token: $TOKEN" 127.0.0.1:{{ .Values.service.collectorPort }}/report
+
+If nothing is being compared, /stats says why: received, pending, expired, dropped.
+
+{{ if not .Values.safety.readsOnly }}
+WARNING: safety.readsOnly is false. Non-idempotent requests are mirrored and the
+shadow will do REAL WRITES.
+{{ end -}}
+{{ if .Values.safety.killSwitch }}
+NOTE: the kill switch is engaged. Traffic is being served; nothing is mirrored.
+{{ end -}}

@@ -1,0 +1,112 @@
+{{- if and .Values.proxy.enabled (or (not .Values.proxy.primary) (not .Values.proxy.shadow)) }}
+{{- fail "proxy.enabled needs both proxy.primary and proxy.shadow: routing to one of them compares nothing" }}
+{{- end }}
+{{- if and (not .Values.auth.token) (not .Values.auth.existingSecret) }}
+{{- fail "auth.token or auth.existingSecret is required: the collector port carries production response bodies, and a pod IP is reachable from the whole cluster by default" }}
+{{- end }}
+{{- if gt (int .Values.replicaCount) 1 }}
+{{- fail "replicaCount > 1 does not work: a pair only forms inside one process, so captures split across pods never pair. See values.yaml." }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dark-canary.fullname" . }}
+  labels:
+    {{- include "dark-canary.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dark-canary.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # The kill switch and the noise rules are both keys in this ConfigMap.
+        # Rules changes want a restart; the kill switch does not, and gets one
+        # anyway — which makes it act immediately instead of on the kubelet's
+        # sync interval.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "dark-canary.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: dark-canary
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -listen=0.0.0.0:{{ .Values.service.collectorPort }}
+            # Kubernetes expands $(VAR) from env, so the token reaches the flag
+            # without ever being written into a manifest.
+            - -token=$(DARK_CANARY_TOKEN)
+            - -rules=/etc/dark-canary/rules.yaml
+            - -kill-file=/etc/dark-canary/kill
+            {{- /* int, or Helm renders a megabyte as 1.048576e+06 and the flag refuses it */}}
+            - -max-body={{ int .Values.safety.maxBodyBytes }}
+            - -correlate-timeout={{ .Values.collector.correlateTimeout }}
+            - -max-pending={{ .Values.collector.maxPending }}
+            - -report-every={{ .Values.collector.reportEvery }}
+            {{- if .Values.safety.scrubFields }}
+            - -scrub={{ join "," .Values.safety.scrubFields }}
+            {{- end }}
+            {{- if not .Values.safety.readsOnly }}
+            - -allow-write-mirroring
+            {{- end }}
+            {{- if .Values.proxy.enabled }}
+            - -proxy-listen=0.0.0.0:{{ .Values.service.proxyPort }}
+            - -primary={{ .Values.proxy.primary }}
+            - -shadow={{ .Values.proxy.shadow }}
+            - -sample={{ .Values.proxy.sample }}
+            - -shadow-timeout={{ .Values.proxy.shadowTimeout }}
+            - -max-inflight={{ .Values.proxy.maxInflight }}
+            {{- end }}
+          env:
+            - name: DARK_CANARY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dark-canary.secretName" . }}
+                  key: token
+          ports:
+            - name: collector
+              containerPort: {{ .Values.service.collectorPort }}
+            {{- if .Values.proxy.enabled }}
+            - name: proxy
+              containerPort: {{ .Values.service.proxyPort }}
+            {{- end }}
+          livenessProbe:
+            httpGet: { path: /healthz, port: collector }
+            periodSeconds: 20
+          readinessProbe:
+            httpGet: { path: /healthz, port: collector }
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dark-canary
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "dark-canary.fullname" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}

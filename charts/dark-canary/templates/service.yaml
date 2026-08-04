@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dark-canary.fullname" . }}
+  labels:
+    {{- include "dark-canary.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "dark-canary.selectorLabels" . | nindent 4 }}
+  ports:
+    {{- if .Values.proxy.enabled }}
+    - name: proxy
+      port: {{ .Values.service.proxyPort }}
+      targetPort: proxy
+    {{- end }}
+    {{- if .Values.service.exposeCollector }}
+    - name: collector
+      port: {{ .Values.service.collectorPort }}
+      targetPort: collector
+    {{- end }}

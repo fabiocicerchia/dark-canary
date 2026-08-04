@@ -1,0 +1,19 @@
+apiVersion: v2
+name: dark-canary
+description: Mirror traffic to a shadow deployment and report genuine divergence
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/fabiocicerchia/dark-canary
+sources:
+  - https://github.com/fabiocicerchia/dark-canary
+keywords:
+  - shadow-traffic
+  - canary
+  - diff
+
+# License of the packaged application. ArtifactHub reads this annotation.
+annotations:
+  artifacthub.io/license: Apache-2.0
+sources:
+  - https://github.com/fabiocicerchia/dark-canary

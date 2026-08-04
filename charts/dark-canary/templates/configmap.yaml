@@ -1,0 +1,17 @@
+{{/*
+One ConfigMap, mounted whole at /etc/dark-canary, so each key becomes a file.
+That is what makes the kill switch expressible in Kubernetes at all: the binary
+looks for a file, and a key that exists is a file that exists.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dark-canary.fullname" . }}
+  labels:
+    {{- include "dark-canary.labels" . | nindent 4 }}
+data:
+  rules.yaml: |
+    {{- toYaml .Values.noiseRules | nindent 4 }}
+  {{- if .Values.safety.killSwitch }}
+  kill: "engaged"
+  {{- end }}

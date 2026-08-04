@@ -1,0 +1,65 @@
+image:
+  repository: ghcr.io/fabiocicerchia/dark-canary
+  tag: ""          # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+# One process, one buffer: two captures only pair if they reach the same
+# instance. More than one replica means requests whose primary landed on pod A
+# and shadow on pod B never pair, and every one of them shows up as `expired`.
+# Raise this only once captures are sharded by correlation id — they are not.
+replicaCount: 1
+
+# Proxy mode. Leave `primary` empty to run as a plain collector fed by an edge
+# that already mirrors (nginx `mirror` + lua/dark_canary.lua).
+proxy:
+  enabled: true
+  primary: ""      # e.g. http://checkout.default.svc.cluster.local:8080
+  shadow: ""       # e.g. http://checkout-shadow.default.svc.cluster.local:8080
+  sample: 0.01     # fraction of eligible requests mirrored
+  shadowTimeout: 10s
+  maxInflight: 64
+
+safety:
+  readsOnly: true  # false mirrors non-idempotent methods — REAL WRITES on the shadow
+  maxBodyBytes: 1048576
+  scrubFields: []  # body fields redacted before anything is stored
+  # Creating the `kill` key makes /etc/dark-canary/kill exist and stops all
+  # mirroring. Traffic keeps being served. Note this propagates on the kubelet's
+  # ConfigMap sync (up to ~60s), not the sub-second of a local `touch` — in a
+  # hurry, `--set proxy.sample=0` or scale the shadow to zero.
+  killSwitch: false
+
+collector:
+  correlateTimeout: 30s
+  maxPending: 10000
+  reportEvery: 0s  # >0 prints the report to stderr on that interval
+
+# The collector port serves /report and the dashboard, which quote production
+# response bodies. Required whenever that port is reachable outside the pod.
+auth:
+  token: ""          # rendered into a Secret
+  existingSecret: "" # …or the name of one you manage, with key `token`
+
+# Merged on top of the built-in defaults. Empty = defaults only.
+noiseRules:
+  rules: []
+
+service:
+  type: ClusterIP
+  proxyPort: 8080
+  # Off by default: the dashboard and /report are an operator tool, not a
+  # service. Reach them with `kubectl port-forward`.
+  exposeCollector: false
+  collectorPort: 8099
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
