@@ -1,0 +1,13 @@
+.git
+.github
+.githooks
+bin
+docs
+examples
+lua
+*.md
+Makefile
+mkdocs.yml
+charts
+Dockerfile
+.dockerignore
