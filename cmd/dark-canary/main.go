@@ -115,6 +115,9 @@ func run() error {
 
 	httpSrv := &http.Server{Addr: *listen, ReadHeaderTimeout: 5 * time.Second}
 	proxySrv := &http.Server{Addr: *proxyListen, ReadHeaderTimeout: 5 * time.Second}
+	// Buffered, so whichever listener dies first records why without waiting for
+	// anyone to be reading.
+	fatal := make(chan error, 2)
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -142,7 +145,10 @@ func run() error {
 			fmt.Fprintf(os.Stderr, "dark-canary proxying %s → %s (shadow %s) — sample=%g\n",
 				*proxyListen, primaryURL, shadowURL, cfg.SampleRate)
 			if err := proxySrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				fmt.Fprintln(os.Stderr, "dark-canary: proxy:", err)
+				// The proxy is the request path: failing to bind it is fatal,
+				// and must exit non-zero. Reporting it only on stderr would
+				// leave a supervisor believing the process stopped cleanly.
+				fatal <- fmt.Errorf("proxy: %w", err)
 				stop()
 			}
 		}()
@@ -153,6 +159,18 @@ func run() error {
 	fmt.Fprintf(os.Stderr, "dark-canary listening on %s — reads-only=%v kill-file=%s\n",
 		*listen, cfg.MirrorReadsOnly, cfg.KillFile)
 	err := httpSrv.ListenAndServe()
+
+	// A listener that never came up has no report to give, and printing an empty
+	// one ahead of the real error reads as "nothing is being compared" when the
+	// actual answer is "the port was taken".
+	if !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	select {
+	case ferr := <-fatal:
+		return ferr
+	default:
+	}
 
 	// The report is the reason the process existed; print it on the way out.
 	_ = report.Text(os.Stderr, srv.agg.Summary())
