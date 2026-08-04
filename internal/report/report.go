@@ -15,7 +15,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/diff"
+	"github.com/fabiocicerchia/dark-canary/internal/diff"
 )
 
 // Severity orders the kinds of divergence by how much they should worry

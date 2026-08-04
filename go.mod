@@ -1,4 +1,4 @@
-module github.com/fabiocicerchia/local-ai-lab/dark-canary
+module github.com/fabiocicerchia/dark-canary
 
 go 1.24
 

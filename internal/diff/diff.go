@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/collector"
+	"github.com/fabiocicerchia/dark-canary/internal/collector"
 )
 
 // Kind classifies a single difference.

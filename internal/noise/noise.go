@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/diff"
+	"github.com/fabiocicerchia/dark-canary/internal/diff"
 )
 
 // Rule suppresses a class of difference at a location.

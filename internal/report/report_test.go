@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/diff"
+	"github.com/fabiocicerchia/dark-canary/internal/diff"
 )
 
 func fixedClock() func() time.Time {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/collector"
+	"github.com/fabiocicerchia/dark-canary/internal/collector"
 )
 
 func pair(primaryBody, shadowBody string) collector.Pair {

@@ -23,11 +23,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/collector"
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/diff"
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/noise"
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/report"
-	"github.com/fabiocicerchia/local-ai-lab/dark-canary/internal/safety"
+	"github.com/fabiocicerchia/dark-canary/internal/collector"
+	"github.com/fabiocicerchia/dark-canary/internal/diff"
+	"github.com/fabiocicerchia/dark-canary/internal/noise"
+	"github.com/fabiocicerchia/dark-canary/internal/report"
+	"github.com/fabiocicerchia/dark-canary/internal/safety"
 )
 
 func main() {
