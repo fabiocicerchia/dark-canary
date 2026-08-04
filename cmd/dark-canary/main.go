@@ -52,6 +52,14 @@ func run() error {
 		writes     = flag.Bool("allow-write-mirroring", false, "accept captures of non-idempotent requests (REAL WRITES on the shadow)")
 		scrub      = flag.String("scrub", "", "comma-separated body fields to redact on arrival")
 		interval   = flag.Duration("report-every", 0, "print the report to stderr on this interval (0 = only on request)")
+
+		// Proxy mode: dark-canary does the routing itself, no nginx, no Lua.
+		primary     = flag.String("primary", "", "upstream that answers the client, e.g. http://127.0.0.1:9001 (enables proxy mode)")
+		shadow      = flag.String("shadow", "", "upstream mirrored to and discarded, e.g. http://127.0.0.1:9002")
+		proxyListen = flag.String("proxy-listen", "127.0.0.1:8080", "address to serve proxied traffic on")
+		sample      = flag.Float64("sample", safety.Default().SampleRate, "fraction of eligible requests mirrored to the shadow")
+		shadowTO    = flag.Duration("shadow-timeout", 10*time.Second, "how long a mirrored request may take before it is abandoned")
+		inflight    = flag.Int("max-inflight", 64, "bound on mirrored requests in flight; over this, requests are served but not mirrored")
 	)
 	flag.Parse()
 
@@ -60,6 +68,7 @@ func run() error {
 	cfg.MaxBodyBytes = *maxBody
 	cfg.MirrorReadsOnly = !*writes
 	cfg.ScrubFields = splitList(*scrub)
+	cfg.SampleRate = *sample
 
 	if err := cfg.Validate(); err != nil {
 		if !errors.Is(err, safety.ErrWriteMirroringEnabled) {
@@ -104,12 +113,41 @@ func run() error {
 	}))
 
 	httpSrv := &http.Server{Addr: *listen, ReadHeaderTimeout: 5 * time.Second}
+	proxySrv := &http.Server{Addr: *proxyListen, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = httpSrv.Shutdown(shutdownCtx)
+		_ = proxySrv.Shutdown(shutdownCtx)
 	}()
+
+	// Proxy mode is opt-in: without -primary this is the collector it has always
+	// been, fed by something else at the edge.
+	if *primary != "" {
+		if *shadow == "" {
+			return fmt.Errorf("-primary needs -shadow: with nothing to mirror to there is nothing to compare")
+		}
+		primaryURL, err := parseUpstream("primary", *primary)
+		if err != nil {
+			return err
+		}
+		shadowURL, err := parseUpstream("shadow", *shadow)
+		if err != nil {
+			return err
+		}
+		proxySrv.Handler = newProxy(srv, primaryURL, shadowURL, cfg.SampleRate, *shadowTO, *inflight)
+		go func() {
+			fmt.Fprintf(os.Stderr, "dark-canary proxying %s → %s (shadow %s) — sample=%g\n",
+				*proxyListen, primaryURL, shadowURL, cfg.SampleRate)
+			if err := proxySrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				fmt.Fprintln(os.Stderr, "dark-canary: proxy:", err)
+				stop()
+			}
+		}()
+	} else if *shadow != "" {
+		return fmt.Errorf("-shadow needs -primary: proxy mode routes to both or neither")
+	}
 
 	fmt.Fprintf(os.Stderr, "dark-canary listening on %s — reads-only=%v kill-file=%s\n",
 		*listen, cfg.MirrorReadsOnly, cfg.KillFile)
@@ -203,6 +241,14 @@ func (s *server) handleCapture(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.ingest(c)
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// ingest is the one door into the buffer: scrub, cap, store. Proxy mode goes
+// through it too, so a capture this process made itself gets the same treatment
+// as one that arrived over the wire — there is no path that stores a raw body.
+func (s *server) ingest(c collector.Capture) {
 	c.ReqBody = s.limit(s.scrubber.Body(c.ReqBody))
 	c.ResBody = s.limit(s.scrubber.Body(c.ResBody))
 	for name, values := range c.ReqHeaders {
@@ -211,9 +257,7 @@ func (s *server) handleCapture(w http.ResponseWriter, r *http.Request) {
 	for name, values := range c.ResHeaders {
 		c.ResHeaders[name] = s.scrubber.Header(name, values)
 	}
-
 	s.buf.Ingest(c)
-	w.WriteHeader(http.StatusAccepted)
 }
 
 func (s *server) limit(b []byte) []byte {
