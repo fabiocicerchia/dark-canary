@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/fabiocicerchia/dark-canary/internal/diff"
 )
 
@@ -25,9 +27,9 @@ type Rule struct {
 	// /headers/<name>, /body/<json pointer>. "*" matches one segment, "**"
 	// matches any number, so /body/**/updatedAt covers a timestamp wherever it
 	// is nested.
-	Path string `json:"path"`
+	Path string `yaml:"path"`
 	// Ignore drops differences here entirely (timestamps, request IDs).
-	Ignore bool `json:"ignore"`
+	Ignore bool `yaml:"ignore"`
 	// Normalise makes a narrower claim than Ignore: the values still have to
 	// agree, just not exactly.
 	//
@@ -36,15 +38,15 @@ type Rule struct {
 	//   trim      strings differing only in surrounding whitespace
 	//   lower     strings differing only in case
 	//   len       strings/arrays of the same length (opaque ids, tokens)
-	Normalise string `json:"normalise,omitempty"`
+	Normalise string `yaml:"normalise,omitempty"`
 	// Reason is carried into the report. A rule nobody can explain is a rule
 	// nobody dares delete.
-	Reason string `json:"reason,omitempty"`
+	Reason string `yaml:"reason,omitempty"`
 }
 
 // Ruleset is loaded declaratively so operators tune it without redeploys.
 type Ruleset struct {
-	Rules []Rule `json:"rules"`
+	Rules []Rule `yaml:"rules"`
 }
 
 var _ diff.Suppressor = Ruleset{}
@@ -64,18 +66,15 @@ func Default() Ruleset {
 	}}
 }
 
-// Load reads a ruleset from a file.
-//
-// JSON, not YAML: it costs no dependency, and the rules are short enough that
-// the difference is a `reason` field instead of a comment. ponytail: swap in
-// gopkg.in/yaml.v3 if operators actually ask for comments and anchors.
+// Load reads a ruleset from a YAML file. Operators edit this by hand at 3am, so
+// comments and anchors are worth the one dependency.
 func Load(path string) (Ruleset, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return Ruleset{}, err
 	}
 	var rs Ruleset
-	if err := json.Unmarshal(b, &rs); err != nil {
+	if err := yaml.Unmarshal(b, &rs); err != nil {
 		return Ruleset{}, fmt.Errorf("%s: %w", path, err)
 	}
 	for i, r := range rs.Rules {

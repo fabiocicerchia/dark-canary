@@ -139,20 +139,23 @@ func TestLoadRejectsRulesThatDoNothing(t *testing.T) {
 		return p
 	}
 
-	if _, err := Load(write("ok.json", `{"rules":[{"path":"/body/ts","ignore":true}]}`)); err != nil {
+	if _, err := Load(write("ok.yaml", "rules:\n  - path: /body/ts\n    ignore: true\n")); err != nil {
 		t.Fatalf("valid ruleset rejected: %v", err)
 	}
-	if _, err := Load(write("noop.json", `{"rules":[{"path":"/body/ts"}]}`)); err == nil {
+	if _, err := Load(write("noop.yaml", "rules:\n  - path: /body/ts\n")); err == nil {
 		t.Error("a rule that neither ignores nor normalises must be rejected, not silently ignored")
 	}
-	if _, err := Load(write("nopath.json", `{"rules":[{"ignore":true}]}`)); err == nil {
+	if _, err := Load(write("nopath.yaml", "rules:\n  - ignore: true\n")); err == nil {
 		t.Error("a rule with no path must be rejected")
 	}
-	if _, err := Load(write("bad.json", `{"rules":[{"path":"/x","normalise":"round:banana"}]}`)); err == nil {
+	if _, err := Load(write("bad.yaml", "rules:\n  - path: /x\n    normalise: round:banana\n")); err == nil {
 		t.Error("an unparseable normalisation must be rejected at load, not at 3am")
 	}
-	if _, err := Load(write("unknown.json", `{"rules":[{"path":"/x","normalise":"vibes"}]}`)); err == nil {
+	if _, err := Load(write("unknown.yaml", "rules:\n  - path: /x\n    normalise: vibes\n")); err == nil {
 		t.Error("an unknown normalisation must be rejected")
+	}
+	if _, err := Load(write("notyaml.yaml", "rules: [ unclosed\n")); err == nil {
+		t.Error("unparseable YAML must be rejected")
 	}
 }
 

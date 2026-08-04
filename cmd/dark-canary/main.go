@@ -44,7 +44,7 @@ func run() error {
 		// no auth would make this the softest target on the network.
 		listen     = flag.String("listen", "127.0.0.1:8099", "address to accept captures on")
 		token      = flag.String("token", "", "shared secret required in X-Dark-Canary-Token; mandatory when -listen is not loopback")
-		rulesPath  = flag.String("rules", "", "noise ruleset (JSON); merged on top of the built-in defaults")
+		rulesPath  = flag.String("rules", "", "noise ruleset (YAML); merged on top of the built-in defaults")
 		timeout    = flag.Duration("correlate-timeout", 30*time.Second, "how long a lone capture waits for its partner")
 		maxPending = flag.Int("max-pending", 10_000, "bound on unpaired captures held in memory")
 		killFile   = flag.String("kill-file", safety.Default().KillFile, "path whose existence stops all processing")

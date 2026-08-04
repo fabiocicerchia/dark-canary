@@ -1,0 +1,24 @@
+rules:
+  - path: /body/**/updatedAt
+    ignore: true
+    reason: server-side timestamp, differs by construction on every request
+
+  - path: /body/**/requestId
+    ignore: true
+    reason: unique per request by design
+
+  - path: /body/total
+    normalise: round:2
+    reason: the shadow sums in a different order; agreement to the cent is agreement
+
+  - path: /body/**/tags
+    normalise: sort
+    reason: no ordering guarantee on this list, and the client sorts it anyway
+
+  - path: /body/**/sessionToken
+    normalise: len
+    reason: "opaque token: same shape is all we can check, and all that matters"
+
+  - path: /headers/x-cache
+    ignore: true
+    reason: the shadow's cache is cold, which is expected and not a behaviour change
