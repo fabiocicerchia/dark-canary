@@ -111,6 +111,7 @@ func run() error {
 	http.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w, "ok")
 	}))
+	http.Handle("/", http.HandlerFunc(srv.handleDashboard))
 
 	httpSrv := &http.Server{Addr: *listen, ReadHeaderTimeout: 5 * time.Second}
 	proxySrv := &http.Server{Addr: *proxyListen, ReadHeaderTimeout: 5 * time.Second}

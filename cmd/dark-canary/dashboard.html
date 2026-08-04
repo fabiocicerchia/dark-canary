@@ -1,0 +1,216 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dark-canary</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f2f2f0;
+    --surface-1: #fcfcfb;
+    --border: #dededa;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #77766f;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-0: #111110;
+      --surface-1: #1a1a19;
+      --border: #33332f;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #918f84;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #111110;
+    --surface-1: #1a1a19;
+    --border: #33332f;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #918f84;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 20px 48px;
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1080px; margin: 0 auto; }
+
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .01em; }
+  .meta { color: var(--text-muted); font-size: 12px; }
+  .meta b { color: var(--text-secondary); font-weight: 500; }
+
+  .banner {
+    display: none; align-items: center; gap: 8px;
+    padding: 10px 14px; margin-bottom: 16px; border-radius: 8px;
+    border: 1px solid var(--critical); color: var(--text-primary);
+    background: color-mix(in srgb, var(--critical) 12%, var(--surface-1));
+    font-size: 13px;
+  }
+  .banner.on { display: flex; }
+
+  /* Exactly one hero figure: the number this dashboard exists to show. */
+  .hero {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 22px; margin-bottom: 12px;
+  }
+  .hero .label { color: var(--text-secondary); font-size: 13px; }
+  .hero .value { font-size: 48px; font-weight: 600; line-height: 1.1; margin-top: 4px; }
+  .hero .sub { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .tile .label { color: var(--text-secondary); font-size: 12px; }
+  .tile .value { font-size: 24px; font-weight: 600; margin-top: 2px; }
+  .tile .note { color: var(--text-muted); font-size: 11px; margin-top: 1px; }
+
+  h2 { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 24px 0 8px; }
+
+  .scroll { overflow-x: auto; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 14px; white-space: nowrap; }
+  th { color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  tbody tr { border-top: 1px solid var(--border); }
+  td.num, th.num { text-align: right; }
+  td.num { font-variant-numeric: tabular-nums; }
+  td.path, td.vals { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  td.vals { color: var(--text-secondary); }
+  .empty { padding: 22px 14px; color: var(--text-muted); font-size: 13px; }
+
+  /* Severity is icon + label + color — never color alone. */
+  .sev { display: inline-flex; align-items: center; gap: 6px; }
+  .sev .dot { font-size: 11px; line-height: 1; }
+  .sev-high .dot { color: var(--critical); }
+  .sev-medium .dot { color: var(--serious); }
+  .sev-low .dot { color: var(--warning); }
+</style>
+
+<main>
+  <header>
+    <h1>dark-canary</h1>
+    <span class="meta" id="meta"></span>
+  </header>
+
+  <div class="banner" id="killed">■ Kill switch engaged — mirroring is stopped. Traffic is still being served.</div>
+  <div class="banner" id="offline">■ Cannot reach the collector.</div>
+
+  <section class="hero">
+    <div class="label">Agreement</div>
+    <div class="value" id="agreement">—</div>
+    <div class="sub" id="agreement-sub">no pairs compared yet</div>
+  </section>
+
+  <div class="tiles" id="tiles"></div>
+
+  <h2>Divergences</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr>
+        <th>Severity</th><th class="num">Count</th><th class="num">Rate</th>
+        <th>Kind</th><th>Path</th><th>Primary → shadow</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="none" hidden></div>
+</main>
+
+<script>
+// The token, when one is set, rides in the fragment: it is never sent in the
+// request line and so never lands in an access log or a proxy's history.
+const token = new URLSearchParams(location.hash.slice(1)).get("token") || "";
+const headers = token ? { "X-Dark-Canary-Token": token } : {};
+
+const $ = id => document.getElementById(id);
+const num = n => n.toLocaleString();
+const SEV = { high: "▲", medium: "◆", low: "●" };
+
+function tile(label, value, note) {
+  return `<div class="tile"><div class="label">${label}</div>` +
+    `<div class="value">${num(value)}</div>` +
+    (note ? `<div class="note">${note}</div>` : "") + `</div>`;
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function clip(s, n) {
+  s = String(s ?? "");
+  return s.length > n ? s.slice(0, n) + "…" : s;
+}
+
+async function refresh() {
+  let report, stats;
+  try {
+    [report, stats] = await Promise.all([
+      fetch("report?format=json", { headers }).then(r => r.json()),
+      fetch("stats", { headers }).then(r => r.json()),
+    ]);
+    $("offline").classList.remove("on");
+  } catch {
+    $("offline").classList.add("on");
+    return;
+  }
+
+  const c = stats.collector;
+  $("killed").classList.toggle("on", stats.kill_switch_engaged);
+
+  const pairs = report.pairs || 0;
+  const rate = pairs ? (report.identical / pairs) * 100 : 0;
+  $("agreement").textContent = pairs ? rate.toFixed(1) + "%" : "—";
+  $("agreement").style.color = pairs && report.divergent === 0 ? "var(--good)" : "var(--text-primary)";
+  $("agreement-sub").textContent = pairs
+    ? `${num(report.identical)} identical of ${num(pairs)} pairs · ${num(report.divergent)} divergent · ${num(report.suppressed)} suppressed by noise rules`
+    : "no pairs compared yet — check received and pending below";
+
+  $("tiles").innerHTML =
+    tile("Received", c.received, "captures in") +
+    tile("Paired", c.paired, "compared") +
+    tile("Pending", c.pending, "waiting for a partner") +
+    tile("Expired", c.expired, "partner never arrived") +
+    tile("Dropped", c.dropped, "buffer full") +
+    tile("Discarded", c.discarded, "malformed") +
+    tile("Backlog", c.backlog, "not yet diffed");
+
+  const groups = report.groups || [];
+  $("rows").innerHTML = groups.map(g => {
+    const sev = SEV[g.severity] || "●";
+    return `<tr>
+      <td><span class="sev sev-${esc(g.severity)}"><span class="dot">${sev}</span>${esc(g.severity)}</span></td>
+      <td class="num">${num(g.count)}</td>
+      <td class="num">${(g.rate * 100).toFixed(1)}%</td>
+      <td>${esc(g.kind)}</td>
+      <td class="path">${esc(g.path)}</td>
+      <td class="vals">${esc(clip(g.example?.primary, 40))} → ${esc(clip(g.example?.shadow, 40))}</td>
+    </tr>`;
+  }).join("");
+
+  const none = $("none");
+  none.hidden = groups.length > 0;
+  none.textContent = pairs
+    ? "No divergences. Every compared pair agreed, or differed only where a noise rule said it may."
+    : "Nothing compared yet.";
+
+  $("meta").innerHTML = `<b>${num(pairs)}</b> pairs since ${new Date(report.since).toLocaleTimeString()}` +
+    ` · refreshed ${new Date().toLocaleTimeString()}`;
+}
+
+refresh();
+setInterval(refresh, 2000);
+</script>
