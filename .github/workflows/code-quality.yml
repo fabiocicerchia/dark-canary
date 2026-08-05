@@ -13,10 +13,10 @@ jobs:
     name: build, vet & test (go)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       # go-version-file reads the toolchain directive in go.mod, so the patched
       # stdlib is pinned in exactly one place.
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
           go-version-file: go.mod
       - name: build
@@ -27,16 +27,16 @@ jobs:
       - name: test
         run: go test -race -coverprofile=coverage.out ./...
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a  # v9.3.0
 
   lua:
     name: test (lua capture hook)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       # The hook runs under OpenResty's LuaJIT (5.1); the tests stub ngx and the
       # kit, so any 5.1-compatible interpreter exercises the same logic.
-      - uses: leafo/gh-actions-lua@v13
+      - uses: leafo/gh-actions-lua@6919171ccf181b826f44b9bca76307b577217377  # v13.0.0
         with:
           luaVersion: "luajit-openresty"
       - name: test
@@ -46,8 +46,8 @@ jobs:
     name: fuzz (smoke)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
           go-version-file: go.mod
       # A short run per target: enough to catch a regression a PR just
@@ -64,7 +64,7 @@ jobs:
       # Whatever input broke it is the only useful artifact of a failed run.
       - name: upload crashers
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: fuzz-corpus
           path: internal/*/testdata/fuzz/
@@ -72,24 +72,24 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       # Lint the GitHub Actions workflows themselves.
       - name: actionlint
-        uses: raven-actions/actionlint@v2
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7  # v2.2.0
 
       # Enforce .editorconfig (indentation, EOL, trailing whitespace).
       - name: editorconfig-checker
-        uses: editorconfig-checker/action-editorconfig-checker@v2
+        uses: editorconfig-checker/action-editorconfig-checker@d2ed4fd072ae6f887e9407c909af0f585d2ad9f4  # v2
 
       # Catch common typos in code and docs.
       - name: typos
-        uses: crate-ci/typos@master
+        uses: crate-ci/typos@2a44449ff3410624a0fa2ea073c670e1c9236a40  # branch master
 
       # pre-commit runs the language-specific hooks defined in
       # .pre-commit-config.yaml. It no-ops gracefully if none apply.
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.x"
       - name: pre-commit
-        uses: pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd  # v3.0.1

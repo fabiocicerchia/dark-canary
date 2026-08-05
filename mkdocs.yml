@@ -15,8 +15,9 @@ theme:
 
 nav:
   - Home: README.md
-  - Getting Started: getting-started.md
   - Architecture: architecture.md
+  - Getting Started: getting-started.md
+  - Noise rules: noise-rules.md
 
 markdown_extensions:
   - admonition
