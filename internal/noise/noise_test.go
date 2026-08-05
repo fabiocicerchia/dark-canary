@@ -149,13 +149,13 @@ func TestLoadRejectsRulesThatDoNothing(t *testing.T) {
 		t.Error("a rule with no path must be rejected")
 	}
 	if _, err := Load(write("bad.yaml", "rules:\n  - path: /x\n    normalise: round:banana\n")); err == nil {
-		t.Error("an unparseable normalisation must be rejected at load, not at 3am")
+		t.Error("an unparsable normalisation must be rejected at load, not at 3am")
 	}
 	if _, err := Load(write("unknown.yaml", "rules:\n  - path: /x\n    normalise: vibes\n")); err == nil {
 		t.Error("an unknown normalisation must be rejected")
 	}
 	if _, err := Load(write("notyaml.yaml", "rules: [ unclosed\n")); err == nil {
-		t.Error("unparseable YAML must be rejected")
+		t.Error("unparsable YAML must be rejected")
 	}
 }
 
