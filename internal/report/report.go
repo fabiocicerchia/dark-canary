@@ -193,28 +193,49 @@ func rank(s string) int {
 // Text renders the summary for a terminal. The UI comes last; until it does,
 // this is the whole interface, and it has to be good enough to make the go/no-go
 // call from.
+// errWriter remembers the first write failure so the report does not claim to
+// have been delivered when half of it went nowhere — Text returns an error, and
+// before this it could only ever return nil.
+type errWriter struct {
+	w   io.Writer
+	err error
+}
+
+func (e *errWriter) Write(p []byte) (int, error) {
+	if e.err != nil {
+		return 0, e.err
+	}
+	n, err := e.w.Write(p)
+	e.err = err
+	return n, err
+}
+
 func Text(w io.Writer, s Summary) error {
-	fmt.Fprintf(w, "%d pairs compared over %s\n", s.Pairs, s.Now.Sub(s.Since).Round(time.Second))
-	fmt.Fprintf(w, "%d identical (%.1f%% agreement), %d divergent, %d differences suppressed by noise rules\n\n",
+	ew := &errWriter{w: w}
+	fmt.Fprintf(ew, "%d pairs compared over %s\n", s.Pairs, s.Now.Sub(s.Since).Round(time.Second))
+	fmt.Fprintf(ew, "%d identical (%.1f%% agreement), %d divergent, %d differences suppressed by noise rules\n\n",
 		s.Identical, s.AgreementRate()*100, s.Divergent, s.Suppressed)
 
 	if len(s.Groups) == 0 {
 		if s.Pairs == 0 {
-			fmt.Fprintln(w, "No pairs yet. Check that both paths are reporting: /stats shows what arrived.")
+			fmt.Fprintln(ew, "No pairs yet. Check that both paths are reporting: /stats shows what arrived.")
 		} else {
-			fmt.Fprintln(w, "No divergence.")
+			fmt.Fprintln(ew, "No divergence.")
 		}
-		return nil
+		return ew.err
 	}
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	tw := tabwriter.NewWriter(ew, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "SEVERITY\tCOUNT\tRATE\tKIND\tPATH\tPRIMARY → SHADOW")
 	for _, g := range s.Groups {
 		fmt.Fprintf(tw, "%s\t%d\t%.1f%%\t%s\t%s\t%s → %s\n",
 			g.Severity, g.Count, g.Rate*100, g.Kind, g.Path,
 			oneLine(g.Example.Primary), oneLine(g.Example.Shadow))
 	}
-	return tw.Flush()
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+	return ew.err
 }
 
 func oneLine(s string) string {
