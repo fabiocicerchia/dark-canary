@@ -120,3 +120,64 @@ the tool exists to produce.
 ## Deploying
 
 See [the README](../README.md#deploying-it) for the Docker image and Helm chart.
+
+## Two ways to run it
+
+**Proxy mode** (`-primary` + `-shadow`) is the whole thing in one binary: it
+routes the traffic itself. The client is answered by the primary; a copy of the
+request is fired at the shadow and its response is read, compared and thrown
+away. Nothing about the shadow — its latency, its errors, its being down — can
+reach the client. Sampling, reads-only and the kill switch are enforced here, in
+the process that does the routing.
+
+A **dashboard** is served at `/` on the collector port: agreement rate, the
+collector counters that answer "why is nothing being compared", and the ranked
+divergence table. One embedded HTML file, no build step and no second container;
+it only polls `/report` and `/stats`. When `-token` is set, open
+`http://host:8099/#token=…` — the fragment is never sent in the request line, so
+the token stays out of access logs.
+
+**Collector mode** (`-listen` alone, the default) accepts captures over
+`POST /captures` from an edge that already mirrors — nginx's `mirror` directive
+plus `lua/dark_canary.lua`. Use it when the mirroring has to happen at an edge
+you already run. `res_body` and `req_body` are base64: they are raw bytes.
+
+Both modes feed the same buffer, diff engine and report. The safety controls
+apply identically — there is no path into the buffer that skips scrubbing.
+
+## Deploying it
+
+```
+docker build -t dark-canary .
+docker run -p 8080:8080 -p 8099:8099 dark-canary \
+  -listen 0.0.0.0:8099 -token "$TOKEN" \
+  -primary http://primary:8080 -shadow http://shadow:8080
+
+helm install dc charts/dark-canary \
+  --set auth.token="$TOKEN" \
+  --set proxy.primary=http://checkout.default.svc.cluster.local:8080 \
+  --set proxy.shadow=http://checkout-shadow.default.svc.cluster.local:8080
+```
+
+Scratch image, no shell, non-root, read-only root filesystem, ~11MB. The chart
+refuses to render rather than install something subtly useless: no token, a
+`-primary` without a `-shadow`, or `replicaCount > 1` — a pair only forms inside
+one process, so captures split across pods never pair at all.
+
+In Kubernetes the kill switch is a key in the chart's ConfigMap, mounted at
+`/etc/dark-canary/kill`: `--set safety.killSwitch=true`. That is the one control
+that is *worse* here than on a VM — it propagates on the kubelet's sync rather
+than the sub-second of a local `touch`. In a hurry, set `proxy.sample=0`.
+
+## Edge wiring — only if you are not using proxy mode
+
+Proxy mode needs none of this. Reach for the Lua hook when nginx is already in
+the request path and a second hop is unacceptable; it requires
+[`nginx-lua-waf-kit`](https://github.com/fabiocicerchia/nginx-lua-waf-kit), which
+is a separate install.
+
+`lua/dark_canary.lua` is deliberately thin — the kill switch, reads-only,
+sampling, correlation and scrubbing all live in `nginx-lua-waf-kit`'s `mirror`
+module, because that hook is useful on its own and building it there is what made
+this project cheaper. What is here is labelling which side a capture came from
+and shipping it. See that project's `examples/waf.conf.example`.
