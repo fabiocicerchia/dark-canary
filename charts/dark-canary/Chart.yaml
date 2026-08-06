@@ -15,5 +15,3 @@ keywords:
 # License of the packaged application. ArtifactHub reads this annotation.
 annotations:
   artifacthub.io/license: Apache-2.0
-sources:
-  - https://github.com/fabiocicerchia/dark-canary
