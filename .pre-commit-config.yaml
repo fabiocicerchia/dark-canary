@@ -10,7 +10,8 @@ repos:
         # k8s manifests are legitimately multi-document, and Helm templates are Go
         # templates rather than YAML — the parser cannot read either as-is.
         args: [--allow-multiple-documents]
-        exclude: ^chart/templates/
+        # The chart here is charts/dark-canary/, not chart/ — match either.
+        exclude: ^charts?/(.*/)?templates/
       - id: check-json
       - id: check-added-large-files
       - id: check-merge-conflict
