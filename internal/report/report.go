@@ -212,23 +212,23 @@ func (e *errWriter) Write(p []byte) (int, error) {
 
 func Text(w io.Writer, s Summary) error {
 	ew := &errWriter{w: w}
-	fmt.Fprintf(ew, "%d pairs compared over %s\n", s.Pairs, s.Now.Sub(s.Since).Round(time.Second))
-	fmt.Fprintf(ew, "%d identical (%.1f%% agreement), %d divergent, %d differences suppressed by noise rules\n\n",
+	_, _ = fmt.Fprintf(ew, "%d pairs compared over %s\n", s.Pairs, s.Now.Sub(s.Since).Round(time.Second))
+	_, _ = fmt.Fprintf(ew, "%d identical (%.1f%% agreement), %d divergent, %d differences suppressed by noise rules\n\n",
 		s.Identical, s.AgreementRate()*100, s.Divergent, s.Suppressed)
 
 	if len(s.Groups) == 0 {
 		if s.Pairs == 0 {
-			fmt.Fprintln(ew, "No pairs yet. Check that both paths are reporting: /stats shows what arrived.")
+			_, _ = fmt.Fprintln(ew, "No pairs yet. Check that both paths are reporting: /stats shows what arrived.")
 		} else {
-			fmt.Fprintln(ew, "No divergence.")
+			_, _ = fmt.Fprintln(ew, "No divergence.")
 		}
 		return ew.err
 	}
 
 	tw := tabwriter.NewWriter(ew, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "SEVERITY\tCOUNT\tRATE\tKIND\tPATH\tPRIMARY → SHADOW")
+	_, _ = fmt.Fprintln(tw, "SEVERITY\tCOUNT\tRATE\tKIND\tPATH\tPRIMARY → SHADOW")
 	for _, g := range s.Groups {
-		fmt.Fprintf(tw, "%s\t%d\t%.1f%%\t%s\t%s\t%s → %s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%d\t%.1f%%\t%s\t%s\t%s → %s\n",
 			g.Severity, g.Count, g.Rate*100, g.Kind, g.Path,
 			oneLine(g.Example.Primary), oneLine(g.Example.Shadow))
 	}

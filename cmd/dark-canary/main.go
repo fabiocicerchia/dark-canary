@@ -109,7 +109,8 @@ func run() error {
 	http.Handle("/report", http.HandlerFunc(srv.handleReport))
 	http.Handle("/stats", http.HandlerFunc(srv.handleStats))
 	http.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprintln(w, "ok")
+		// Nothing to do if the probe hung up mid-write; the status is already sent.
+		_, _ = fmt.Fprintln(w, "ok")
 	}))
 	http.Handle("/", http.HandlerFunc(srv.handleDashboard))
 
