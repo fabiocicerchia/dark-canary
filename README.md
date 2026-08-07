@@ -4,6 +4,7 @@
 [![Security](https://github.com/fabiocicerchia/dark-canary/actions/workflows/security.yml/badge.svg)](https://github.com/fabiocicerchia/dark-canary/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/fabiocicerchia/dark-canary/badge)](https://securityscorecards.dev/viewer/?uri=github.com/fabiocicerchia/dark-canary)
+[![CI carbon](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/fabiocicerchia/dark-canary/gh-pages/badge.json)](.github/workflows/carbon-badge.yml)
 
 Mirror production traffic to a shadow deployment, compare the responses, and tell
 the operator whether the shadow behaves identically. One path returns to the
