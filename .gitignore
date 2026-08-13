@@ -1,6 +1,5 @@
 bin
 coverage.out
-# repo-skeleton
 .DS_Store
 reports/
 site/
