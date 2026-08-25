@@ -5,20 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>dark-canary — mirror production traffic to a shadow deployment and diff the responses.</title>
 <meta name="description" content="One binary routes the traffic, compares the primary and shadow responses structurally, and suppresses the noise — timestamps, IDs, ordering, float precision — so the only thing left in the report is a real behaviour change.">
+<!-- The palette lives in the docs theme, so the splash and /docs/ cannot drift
+     apart. The path is relative to the *deployed* layout: splash at /, rendered
+     docs at /docs/. -->
+<link rel="stylesheet" href="docs/stylesheets/extra.css">
 <style>
-:root{--accent:#fbbf24;--accent2:#d97706}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2.5rem 1.5rem;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   background:linear-gradient(160deg,#0d0c08,#1a1710 60%,#241f14);color:#f6f2e8}
 .card{max-width:700px;width:100%}
 h1{font-size:2.5rem;margin:0 0 .35rem;line-height:1.15;
-  background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;
   background-clip:text;color:transparent;display:inline-block}
 .tagline{font-size:1.15rem;color:#ddd4c0;margin:0 0 1.4rem;font-weight:500}
 p.desc{color:#b7ac95;line-height:1.65;margin:0 0 1.8rem}
 .install-label{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;
-  color:var(--accent2);margin:0 0 .5rem;font-weight:700}
+  color:var(--accent-2);margin:0 0 .5rem;font-weight:700}
 pre{background:#100e09;border:1px solid #38301d;border-radius:10px;padding:1rem 1.2rem;
   overflow-x:auto;font-size:.9rem;margin:0 0 .6rem}
 code{color:#9be9a8;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -27,9 +30,9 @@ code{color:#9be9a8;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monosp
 .badges{margin:0 0 1.6rem;display:flex;flex-wrap:wrap;gap:1.1rem;color:#93886f;font-size:.85rem}
 .badges span{display:flex;align-items:center;gap:.4rem}
 .links{margin-top:1.6rem;display:flex;gap:.9rem;flex-wrap:wrap;align-items:center}
-a.btn{color:#0d0c08;background:linear-gradient(90deg,var(--accent),var(--accent2));
+a.btn{color:#0d0c08;background:linear-gradient(90deg,var(--accent),var(--accent-2));
   padding:.65rem 1.3rem;border-radius:8px;text-decoration:none;font-weight:700}
-a.plain{color:var(--accent2);text-decoration:none;font-weight:600}
+a.plain{color:var(--accent-2);text-decoration:none;font-weight:600}
 footer{margin-top:2.2rem;color:#6b6252;font-size:.82rem}
 @media (prefers-color-scheme: light){
   body{background:linear-gradient(160deg,#fffbf2,#fdf6e7 60%,#faf0da);color:#241f14}
@@ -59,7 +62,7 @@ footer{margin-top:2.2rem;color:#6b6252;font-size:.82rem}
   </div>
   <div class="links">
     <a class="btn" href="https://github.com/fabiocicerchia/dark-canary">GitHub →</a>
-    <a class="plain" href="https://github.com/fabiocicerchia/dark-canary#readme">Full docs</a>
+    <a class="plain" href="docs/">Full docs</a>
   </div>
   <footer>Apache 2.0 · Fabio Cicerchia</footer>
 </div>
