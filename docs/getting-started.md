@@ -69,7 +69,7 @@ The first instinct on seeing a row is to write a rule that hides it. Only do tha
 when the values differ *by construction* — a timestamp, a request id, an
 unordered array, a float summed in a different order. That is what `reason:` is
 for; a rule nobody can explain is a rule nobody dares delete. See
-[noise rules](../README.md#noise-rules).
+[noise rules](README.md#noise-rules).
 
 ## When nothing is being compared
 
@@ -119,7 +119,7 @@ the tool exists to produce.
 
 ## Deploying
 
-See [the README](../README.md#deploying-it) for the Docker image and Helm chart.
+See [the README](README.md#deploying-it) for the Docker image and Helm chart.
 
 ## Two ways to run it
 
