@@ -160,7 +160,12 @@ func (p *proxy) mirrorToShadow(r *http.Request, body []byte, correl string) {
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	r.ContentLength = int64(len(body))
 
-	resp, err := p.client.Do(r)
+	// gosec G704 reads this as SSRF because `r` came off the wire. The
+	// destination does not: the two lines above overwrite Scheme and Host with
+	// p.shadow, which is parsed once at startup from the -shadow flag. A request
+	// can influence the path, the query and the headers it is mirrored with, but
+	// not where it is mirrored to.
+	resp, err := p.client.Do(r) //nolint:gosec // destination is the -shadow flag, not the request
 	if err != nil {
 		// A shadow that refuses the request is a finding, but not one this tool
 		// can express as a diff — the pair will expire and show up in /stats.
