@@ -30,6 +30,27 @@ import (
 	"github.com/fabiocicerchia/dark-canary/internal/safety"
 )
 
+const (
+	// tokenHeader carries the shared secret on every guarded endpoint. The
+	// dashboard and the Helm chart's NOTES.txt spell it out too, so it is a
+	// protocol value, not a detail of the check.
+	tokenHeader = "X-Dark-Canary-Token"
+
+	// readHeaderTimeout bounds a client that opens a connection and dawdles over
+	// the request line. Both listeners get it; the proxy one is in the request
+	// path, so a slowloris there is a production outage rather than a nuisance.
+	readHeaderTimeout = 5 * time.Second
+
+	// shutdownGrace is how long in-flight requests have to finish after SIGTERM
+	// before the listeners are cut. Shorter than a typical pod terminationGrace
+	// so the process is gone before the kill.
+	shutdownGrace = 5 * time.Second
+)
+
+// Only idempotent methods are mirrored. Shared by the proxy's mirror decision
+// and the collector's refusal to accept a capture of anything else.
+var idempotent = map[string]bool{http.MethodGet: true, http.MethodHead: true, http.MethodOptions: true}
+
 func main() {
 	if err := run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fmt.Fprintln(os.Stderr, "dark-canary:", err)
@@ -43,7 +64,7 @@ func run() error {
 		// traffic, and /report serves them back — binding every interface with
 		// no auth would make this the softest target on the network.
 		listen     = flag.String("listen", "127.0.0.1:8099", "address to accept captures on")
-		token      = flag.String("token", "", "shared secret required in X-Dark-Canary-Token; mandatory when -listen is not loopback")
+		token      = flag.String("token", "", "shared secret required in "+tokenHeader+"; mandatory when -listen is not loopback")
 		rulesPath  = flag.String("rules", "", "noise ruleset (YAML); merged on top of the built-in defaults")
 		timeout    = flag.Duration("correlate-timeout", 30*time.Second, "how long a lone capture waits for its partner")
 		maxPending = flag.Int("max-pending", 10_000, "bound on unpaired captures held in memory")
@@ -114,14 +135,14 @@ func run() error {
 	}))
 	http.Handle("/", http.HandlerFunc(srv.handleDashboard))
 
-	httpSrv := &http.Server{Addr: *listen, ReadHeaderTimeout: 5 * time.Second}
-	proxySrv := &http.Server{Addr: *proxyListen, ReadHeaderTimeout: 5 * time.Second}
+	httpSrv := &http.Server{Addr: *listen, ReadHeaderTimeout: readHeaderTimeout}
+	proxySrv := &http.Server{Addr: *proxyListen, ReadHeaderTimeout: readHeaderTimeout}
 	// Buffered, so whichever listener dies first records why without waiting for
 	// anyone to be reading.
 	fatal := make(chan error, 2)
 	go func() {
 		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 		defer cancel()
 		_ = httpSrv.Shutdown(shutdownCtx)
 		_ = proxySrv.Shutdown(shutdownCtx)
@@ -208,7 +229,7 @@ func (s *server) authorised(r *http.Request) bool {
 	if s.token == "" {
 		return true
 	}
-	return subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Dark-Canary-Token")), []byte(s.token)) == 1
+	return subtle.ConstantTimeCompare([]byte(r.Header.Get(tokenHeader)), []byte(s.token)) == 1
 }
 
 func newServer(cfg safety.Config, rules noise.Ruleset, opts collector.Options) *server {
@@ -221,8 +242,6 @@ func newServer(cfg safety.Config, rules noise.Ruleset, opts collector.Options) *
 		agg:      report.New(nil),
 	}
 }
-
-var idempotent = map[string]bool{http.MethodGet: true, http.MethodHead: true, http.MethodOptions: true}
 
 func (s *server) handleCapture(w http.ResponseWriter, r *http.Request) {
 	if !s.authorised(r) {
