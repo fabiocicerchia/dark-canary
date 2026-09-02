@@ -112,6 +112,14 @@ stores things.
 - A shadow that refuses the request leaves an orphan capture that expires; that
   is a finding the tool cannot express as a diff.
 - Captures pair per-process only — see "one process, one buffer" above.
+- The kill switch is eventually consistent, by its TTL (1 s by default): a
+  burst arriving inside that window is still mirrored. `FileKillSwitch` caches
+  its answer so the hot path costs a clock read rather than a `stat` per
+  request, and "everything stops within TTL" is the contract. The e2e harness
+  waits the window out rather than asserting an instant stop.
+- No run against real traffic. `make e2e` mirrors a real service against a real
+  shadow with the real binary between them, but the payloads are shaped by hand
+  and the one divergence is the one that was planted.
 
 Record further significant choices here (or in a `docs/adr/` folder if they pile
 up).
@@ -209,9 +217,25 @@ correlation window. Point `/report?format=json` at whatever already stores thing
 ## Tests
 
 ```
-make test
+make test      # components, in isolation
+make e2e       # the whole thing, against two real services
 ```
 
-Covers the diff engine's structural guarantees, noise rule matching and every
-normalisation, collector correlation/expiry/bounding/back-pressure, the safety
-controls, report grouping and ranking, and the HTTP surface end to end.
+`make test` covers the diff engine's structural guarantees, noise rule matching
+and every normalisation, collector correlation/expiry/bounding/back-pressure,
+the safety controls, report grouping and ranking, and the HTTP surface end to
+end.
+
+`make e2e` covers the thing all of those exist to make possible, and which none
+of them touches: a real primary, a real shadow, the real binary proxying
+between them, and a load loop through it. The demo service is deliberately
+untidy — ids, clocks, unstable collection order, non-associative float sums —
+with one real regression underneath, and the harness asserts that the
+regression is reported **and that nothing else is**. A diff tool that reports
+the noise is worthless; one that suppresses the bug along with it is worse, and
+only a run like this can tell the two apart. See [`e2e/README.md`](../e2e/README.md),
+including the three things the first run of it found.
+
+It is not real traffic, and the README says so. It gives the shape of that run
+reproducibly and in CI; the sustained version is the same demo service run
+standalone with a load generator pointed at it.

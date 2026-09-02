@@ -18,6 +18,7 @@ make help         # every verb this repo exposes
 make build        # compile the binary into ./bin
 make test         # run tests
 make test-lua     # run the capture hook's tests (any Lua 5.1+, no luarocks needed)
+make e2e          # mirror a real service against a real shadow, end to end
 make tidy         # tidy modules
 make clean        # remove build artifacts
 make setup        # Install git hooks and dev tooling
@@ -50,5 +51,8 @@ make lint         # Run all pre-commit checks on the whole tree
   for that; don't route around it.
 - Lua hook changes need `make test-lua` (runs on any Lua 5.1+, no luarocks).
 - A new noise suppressor needs a rationale and a test with a real payload.
+  `make e2e` is where a rule proves itself against a payload nobody tidied:
+  every rule in `e2e/noise.yaml` was added because the harness reported the
+  difference it suppresses, and says so.
 - Don't touch generated files or lockfiles by hand.
 - Ask before large refactors or destructive operations.

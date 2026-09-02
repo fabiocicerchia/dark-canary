@@ -31,3 +31,11 @@ jobs:
 
       - name: Test
         run: make test
+
+      # The end-to-end harness: two real services, the real binary, a real
+      # proxy in between. Everything else in the suite tests a component in
+      # isolation, and the thing they exist to make possible — a shadow
+      # mirrored against a primary with the noise suppressed and the one real
+      # divergence still visible — is only exercised here. See e2e/README.md.
+      - name: End to end
+        run: make e2e
