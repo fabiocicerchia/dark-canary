@@ -320,24 +320,31 @@ func split(s string) []string {
 	return parts
 }
 
+// Greedy single-pass matching: on a mismatch, rewind to one segment past the
+// last "**" and try again. Recursing at every "**" instead is exponential —
+// "**/**/**/**" against a long path took longer than a fuzz worker will wait.
 func matchSegments(pattern, path []string) bool {
-	if len(pattern) == 0 {
-		return len(path) == 0
-	}
-	if pattern[0] == "**" {
-		// Match zero or more segments here, then the rest of the pattern.
-		for i := 0; i <= len(path); i++ {
-			if matchSegments(pattern[1:], path[i:]) {
-				return true
-			}
+	pi, si := 0, 0
+	star, rewind := -1, 0
+	for si < len(path) {
+		switch {
+		case pi < len(pattern) && pattern[pi] == "**":
+			star, rewind = pi, si
+			pi++
+		case pi < len(pattern) && (pattern[pi] == "*" || pattern[pi] == path[si]):
+			pi++
+			si++
+		case star >= 0:
+			// Let the last "**" swallow one more segment.
+			rewind++
+			pi, si = star+1, rewind
+		default:
+			return false
 		}
-		return false
 	}
-	if len(path) == 0 {
-		return false
+	// Trailing "**" are free; anything else still owed is a mismatch.
+	for pi < len(pattern) && pattern[pi] == "**" {
+		pi++
 	}
-	if pattern[0] != "*" && pattern[0] != path[0] {
-		return false
-	}
-	return matchSegments(pattern[1:], path[1:])
+	return pi == len(pattern)
 }
