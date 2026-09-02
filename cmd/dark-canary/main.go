@@ -323,6 +323,14 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 	_ = report.Text(w, summary)
 }
 
+// statsResponse is the body of /stats. It has a name because it is a wire
+// contract, not a local: the dashboard reads stats.kill_switch_engaged, so the
+// field tags cannot be changed without changing the page with them.
+type statsResponse struct {
+	Collector collector.Stats `json:"collector"`
+	Kill      bool            `json:"kill_switch_engaged"`
+}
+
 // The first question of any shadow deployment is "why is nothing being
 // compared", and this is the answer: what arrived, what paired, what expired.
 func (s *server) handleStats(w http.ResponseWriter, r *http.Request) {
@@ -333,10 +341,7 @@ func (s *server) handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(struct {
-		Collector collector.Stats `json:"collector"`
-		Kill      bool            `json:"kill_switch_engaged"`
-	}{s.buf.Stats(), s.kill.Engaged()})
+	_ = enc.Encode(statsResponse{Collector: s.buf.Stats(), Kill: s.kill.Engaged()})
 }
 
 func splitList(s string) []string {
