@@ -183,28 +183,15 @@ func compare(spec string, a, b any) (equalAlready, equalNormalised bool) {
 	return false, n.equal(a, b)
 }
 
+// equal reports whether the two values agree once this normalisation is applied.
+// A value the normalisation cannot be applied to (round on a string that is not
+// a number) is never equal: a rule that cannot judge does not suppress.
 func (n normaliser) equal(a, b any) bool {
 	switch n.kind {
 	case "round":
-		af, aok := toFloat(a)
-		bf, bok := toFloat(b)
-		if !aok || !bok {
-			return false
-		}
-		shift := math.Pow(10, float64(n.precision))
-		return math.Round(af*shift) == math.Round(bf*shift)
+		return n.equalRounded(a, b)
 	case "sort":
-		as, aok := toSortedStrings(a)
-		bs, bok := toSortedStrings(b)
-		if !aok || !bok || len(as) != len(bs) {
-			return false
-		}
-		for i := range as {
-			if as[i] != bs[i] {
-				return false
-			}
-		}
-		return true
+		return equalSorted(a, b)
 	case "trim":
 		as, aok := a.(string)
 		bs, bok := b.(string)
@@ -220,6 +207,30 @@ func (n normaliser) equal(a, b any) bool {
 	default:
 		return false
 	}
+}
+
+func (n normaliser) equalRounded(a, b any) bool {
+	af, aok := toFloat(a)
+	bf, bok := toFloat(b)
+	if !aok || !bok {
+		return false
+	}
+	shift := math.Pow(10, float64(n.precision))
+	return math.Round(af*shift) == math.Round(bf*shift)
+}
+
+func equalSorted(a, b any) bool {
+	as, aok := toSortedStrings(a)
+	bs, bok := toSortedStrings(b)
+	if !aok || !bok || len(as) != len(bs) {
+		return false
+	}
+	for i := range as {
+		if as[i] != bs[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Post-hoc variant: the engine renders values to strings, so only the
