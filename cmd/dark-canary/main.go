@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -51,8 +52,14 @@ const (
 var idempotent = map[string]bool{http.MethodGet: true, http.MethodHead: true, http.MethodOptions: true}
 
 func main() {
+	// One logger for the whole process: diagnostics on stderr, INFO by default.
+	// There is no -v flag to read a level from, and adding one is a feature.
+	// The report is not a diagnostic and never goes through this — it is the
+	// tool's output, and it stays a plain write.
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+
 	if err := run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		fmt.Fprintln(os.Stderr, "dark-canary:", err)
+		slog.Error("dark-canary failed", "err", err)
 		os.Exit(1)
 	}
 }
@@ -85,7 +92,7 @@ func run() error {
 	cfg, warn, err := o.safetyConfig()
 	if warn != nil {
 		// Supported, but never silent.
-		fmt.Fprintln(os.Stderr, "dark-canary: WARNING:", warn)
+		slog.Warn("write mirroring is enabled", "warning", warn)
 	}
 	if err != nil {
 		return err
@@ -125,8 +132,8 @@ func run() error {
 	if primaryURL != nil {
 		proxySrv.Handler = newProxy(srv, primaryURL, shadowURL, cfg.SampleRate, o.shadowTO, o.inflight)
 		go func() {
-			fmt.Fprintf(os.Stderr, "dark-canary proxying %s \u2192 %s (shadow %s) \u2014 sample=%g\n",
-				o.proxyListen, primaryURL, shadowURL, cfg.SampleRate)
+			slog.Info("proxying", "listen", o.proxyListen, "primary", primaryURL,
+				"shadow", shadowURL, "sample", cfg.SampleRate)
 			if err := proxySrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				// The proxy is the request path: failing to bind it is fatal,
 				// and must exit non-zero. Reporting it only on stderr would
@@ -137,8 +144,8 @@ func run() error {
 		}()
 	}
 
-	fmt.Fprintf(os.Stderr, "dark-canary listening on %s — reads-only=%v kill-file=%s\n",
-		o.listen, cfg.MirrorReadsOnly, cfg.KillFile)
+	slog.Info("listening", "addr", o.listen,
+		"reads_only", cfg.MirrorReadsOnly, "kill_file", cfg.KillFile)
 	err = httpSrv.ListenAndServe()
 
 	// A listener that never came up has no report to give, and printing an empty
