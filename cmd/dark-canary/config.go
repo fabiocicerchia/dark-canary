@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"net/url"
 	"time"
 
@@ -74,7 +73,7 @@ func (o *options) safetyConfig() (cfg safety.Config, warn, err error) {
 
 	if err := cfg.Validate(); err != nil {
 		if !errors.Is(err, safety.ErrWriteMirroringEnabled) {
-			return cfg, nil, err
+			return cfg, nil, usagef("%w", err)
 		}
 		warn = err
 	}
@@ -82,7 +81,7 @@ func (o *options) safetyConfig() (cfg safety.Config, warn, err error) {
 	// Refuse to be reachable and unauthenticated at the same time. Failing at
 	// startup is the only place this can be caught before the data is exposed.
 	if !isLoopback(o.listen) && o.token == "" {
-		return cfg, warn, fmt.Errorf("-listen %s is not loopback: set -token, or bind to 127.0.0.1", o.listen)
+		return cfg, warn, usagef("-listen %s is not loopback: set -token, or bind to 127.0.0.1", o.listen)
 	}
 	return cfg, warn, nil
 }
@@ -95,7 +94,9 @@ func (o *options) rules() (noise.Ruleset, error) {
 	}
 	loaded, err := noise.Load(o.rulesPath)
 	if err != nil {
-		return rules, err
+		// Missing file or unusable content: either way -rules points at
+		// something the tool cannot run with, and the two get different codes.
+		return rules, rulesetError{err}
 	}
 	return rules.Merge(loaded), nil
 }
@@ -105,18 +106,18 @@ func (o *options) rules() (noise.Ruleset, error) {
 func (o *options) upstreams() (primary, shadow *url.URL, err error) {
 	if o.primary == "" {
 		if o.shadow != "" {
-			return nil, nil, fmt.Errorf("-shadow needs -primary: proxy mode routes to both or neither")
+			return nil, nil, usagef("-shadow needs -primary: proxy mode routes to both or neither")
 		}
 		return nil, nil, nil
 	}
 	if o.shadow == "" {
-		return nil, nil, fmt.Errorf("-primary needs -shadow: with nothing to mirror to there is nothing to compare")
+		return nil, nil, usagef("-primary needs -shadow: with nothing to mirror to there is nothing to compare")
 	}
 	if primary, err = parseUpstream("primary", o.primary); err != nil {
-		return nil, nil, err
+		return nil, nil, usagef("%w", err)
 	}
 	if shadow, err = parseUpstream("shadow", o.shadow); err != nil {
-		return nil, nil, err
+		return nil, nil, usagef("%w", err)
 	}
 	return primary, shadow, nil
 }

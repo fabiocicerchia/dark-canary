@@ -60,7 +60,7 @@ func main() {
 
 	if err := run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("dark-canary failed", "err", err)
-		os.Exit(1)
+		os.Exit(exitCode(err))
 	}
 }
 
