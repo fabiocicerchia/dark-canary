@@ -4,6 +4,9 @@ go 1.24
 
 // Patched stdlib: go1.26.0 carries 12 govulncheck hits reachable from
 // ListenAndServe (crypto/x509, crypto/tls, net/url, net/textproto, net, os).
-toolchain go1.26.5
+// 1.26.6 adds five more that this code does call — the proxy's own
+// http.Client.Do and ReverseProxy.RoundTrip reach them, so they are not
+// theoretical here (GO-2026-5026 among them, in net/http via x/net/idna).
+toolchain go1.26.6
 
 require gopkg.in/yaml.v3 v3.0.1

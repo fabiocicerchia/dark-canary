@@ -25,7 +25,13 @@ package demo
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	// nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used
+	// Deliberate, and crypto/rand would break it: the point of this service is
+	// SEEDED, reproducible noise that differs between the two sides. Nothing
+	// here is a token, an id anyone trusts, or a security decision — it is
+	// synthetic payload jitter in a test fixture, and unpredictability is the
+	// opposite of what it needs.
+	"math/rand" //nolint:gosec // test fixture noise, seeded on purpose
 	"net/http"
 	"strconv"
 	"strings"

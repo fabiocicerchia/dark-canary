@@ -12,12 +12,16 @@ rules:
   # --- headers ---------------------------------------------------------------
   - path: /headers/x-served-by
     ignore: true
-    reason: names the process that answered, which is the one thing the two sides must differ on
+    reason: >-
+      names the process that answered, which is the one thing the two sides
+      must differ on
 
   # --- ids and clocks --------------------------------------------------------
   - path: /body/**/trace_id
     ignore: true
-    reason: unique per request by construction; equality here would mean the shadow was replaying
+    reason: >-
+      unique per request by construction; equality here would mean the shadow
+      was replaying
 
   - path: /body/**/cursor
     ignore: true
@@ -25,7 +29,9 @@ rules:
 
   - path: /body/**/served_at
     ignore: true
-    reason: wall clock at response time; the two sides are never called in the same nanosecond
+    reason: >-
+      wall clock at response time; the two sides are never called in the same
+      nanosecond
 
   - path: /body/**/generated
     ignore: true
@@ -35,12 +41,12 @@ rules:
   #
   # The first attempt was `normalise: len`, on the reasoning that a shadow an
   # order of magnitude slower is a finding. That was wrong twice over. `len` is
-  # for strings and arrays, so on a number it does nothing — and even if it had
-  # worked, it is the wrong idea: a duration in a response body measures the
-  # SERVER, not its answer. dark-canary compares behaviour. Latency belongs in
-  # latency metrics, where it can be read as a distribution rather than as a
-  # per-request equality, and leaving it here buried the one real finding under
-  # a 94%-rate group.
+  # for strings and arrays, so on a number it does nothing — and even if it
+  # had worked, it is the wrong idea: a duration in a response body measures
+  # the SERVER, not its answer. dark-canary compares behaviour. Latency
+  # belongs in latency metrics, where it can be read as a distribution rather
+  # than as a per-request equality, and leaving it here buried the one real
+  # finding under a 94%-rate group.
   - path: /body/**/duration_ms
     ignore: true
     reason: |
@@ -51,7 +57,9 @@ rules:
   # --- ordering --------------------------------------------------------------
   - path: /body/items
     normalise: sort
-    reason: two processes iterate a map in two orders; the SET is what the API promises
+    reason: >-
+      two processes iterate a map in two orders; the SET is what the API
+      promises
 
   # --- float precision -------------------------------------------------------
   # The narrowest rule that works, on purpose. `ignore` here would have hidden

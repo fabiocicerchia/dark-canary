@@ -29,12 +29,11 @@ Tidy payloads are exactly the ones noise suppression does not need tuning for,
 so the service differs between its two sides in the four ways a real pair of
 deployments does:
 
-| | |
-| --- | --- |
-| `trace_id`, `cursor` | unique per request by construction |
-| `served_at`, `generated`, `duration_ms` | clocks and durations, never equal |
-| `items` | collection order is not stable between two processes |
-| `total`, `lines` | float addition is not associative, so summing the same numbers in a different order differs in the last place |
+- `trace_id`, `cursor` — unique per request by construction.
+- `served_at`, `generated`, `duration_ms` — clocks and durations, never equal.
+- `items` — collection order is not stable between two processes.
+- `total`, `lines` — float addition is not associative, so summing the same
+  numbers in a different order differs in the last place.
 
 And underneath all of that, **one real bug**: on an order with a discount, the
 shadow omits the `discount` field. The kind a finance team notices a week
@@ -60,31 +59,31 @@ which is asserted too.
 Three things, none of which a unit test would have surfaced. They are the
 reason the harness is worth having:
 
-1. **`duration_ms` reached the report as a 94%-rate finding.** The first
-   `e2e/noise.yaml` tried `normalise: len` on it, reasoning that a shadow an
-   order of magnitude slower is worth knowing about. Wrong twice over: `len` is
-   for strings and arrays, so on a number it does nothing — and the idea itself
-   is wrong, because a duration in a response body measures the *server*, not
-   its answer. It is `ignore` now, with that written down.
-2. **`-sample` defaults to 0.01.** Correct for production, and it meant the
-   first run of this harness mirrored four requests in four hundred. The
-   harness passes `-sample 1` explicitly.
-3. **The kill switch is eventually consistent, by one second.**
-   `FileKillSwitch` caches its answer for a TTL so the hot path costs a clock
-   read rather than a `stat` per request. A test asserting an *instant* stop
-   found 120 captures still arriving — the documented contract working. The
-   test waits the window out instead.
+- **`duration_ms` reached the report as a 94%-rate finding.** The first
+  `e2e/noise.yaml` tried `normalise: len` on it, reasoning that a shadow an
+  order of magnitude slower is worth knowing about. Wrong twice over: `len` is
+  for strings and arrays, so on a number it does nothing — and the idea itself
+  is wrong, because a duration in a response body measures the *server*, not
+  its answer. It is `ignore` now, with that written down.
+- **`-sample` defaults to 0.01.** Correct for production, and it meant the
+  first run of this harness mirrored four requests in four hundred. The
+  harness passes `-sample 1` explicitly.
+- **The kill switch is eventually consistent, by one second.**
+  `FileKillSwitch` caches its answer for a TTL so the hot path costs a clock
+  read rather than a `stat` per request. A test asserting an *instant* stop
+  found 120 captures still arriving — the documented contract working. The
+  test waits the window out instead.
 
 ## What it asserts
 
-| | |
-| --- | --- |
-| the pair forms | across two processes and a proxy, hundreds of times |
-| the real divergence is found | and no noise is reported alongside it |
-| the user gets the primary's answer | field by field, with the shadow both slow and wrong |
-| the kill file stops mirroring | past its TTL, without costing one user request |
-| `-sample` samples | 0.25 mirrors roughly a quarter, and serves the rest |
-| unpaired captures expire | 100 unpairable requests leave `pending` at 0 |
+- **the pair forms** — across two processes and a proxy, hundreds of times.
+- **the real divergence is found** — and no noise is reported alongside it.
+- **the user gets the primary's answer** — field by field, with the shadow
+  both slow and wrong.
+- **the kill file stops mirroring** — past its TTL, without costing one user
+  request.
+- **`-sample` samples** — 0.25 mirrors roughly a quarter, serves the rest.
+- **unpaired captures expire** — 100 unpairable requests leave `pending` at 0.
 
 ## What it is not
 
@@ -99,7 +98,8 @@ For the sustained half, the demo service also runs standalone:
 
 ```sh
 go run ./e2e/demo/cmd/demo-service -listen 127.0.0.1:9001 -name primary -seed 1
-go run ./e2e/demo/cmd/demo-service -listen 127.0.0.1:9002 -name shadow -seed 2 -bug -latency 15ms
+go run ./e2e/demo/cmd/demo-service -listen 127.0.0.1:9002 -name shadow \
+    -seed 2 -bug -latency 15ms
 ./bin/dark-canary -primary http://127.0.0.1:9001 -shadow http://127.0.0.1:9002 \
     -rules e2e/noise.yaml -sample 1 -report-every 30s
 ```

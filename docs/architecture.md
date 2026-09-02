@@ -233,8 +233,9 @@ untidy â€” ids, clocks, unstable collection order, non-associative float sums â€
 with one real regression underneath, and the harness asserts that the
 regression is reported **and that nothing else is**. A diff tool that reports
 the noise is worthless; one that suppresses the bug along with it is worse, and
-only a run like this can tell the two apart. See [`e2e/README.md`](../e2e/README.md),
-including the three things the first run of it found.
+only a run like this can tell the two apart. See
+[`e2e/README.md`](../e2e/README.md), including the three things the first run
+of it found.
 
 It is not real traffic, and the README says so. It gives the shape of that run
 reproducibly and in CI; the sustained version is the same demo service run
