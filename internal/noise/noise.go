@@ -183,28 +183,15 @@ func compare(spec string, a, b any) (equalAlready, equalNormalised bool) {
 	return false, n.equal(a, b)
 }
 
+// equal reports whether the two values agree once this normalisation is applied.
+// A value the normalisation cannot be applied to (round on a string that is not
+// a number) is never equal: a rule that cannot judge does not suppress.
 func (n normaliser) equal(a, b any) bool {
 	switch n.kind {
 	case "round":
-		af, aok := toFloat(a)
-		bf, bok := toFloat(b)
-		if !aok || !bok {
-			return false
-		}
-		shift := math.Pow(10, float64(n.precision))
-		return math.Round(af*shift) == math.Round(bf*shift)
+		return n.equalRounded(a, b)
 	case "sort":
-		as, aok := toSortedStrings(a)
-		bs, bok := toSortedStrings(b)
-		if !aok || !bok || len(as) != len(bs) {
-			return false
-		}
-		for i := range as {
-			if as[i] != bs[i] {
-				return false
-			}
-		}
-		return true
+		return equalSorted(a, b)
 	case "trim":
 		as, aok := a.(string)
 		bs, bok := b.(string)
@@ -220,6 +207,30 @@ func (n normaliser) equal(a, b any) bool {
 	default:
 		return false
 	}
+}
+
+func (n normaliser) equalRounded(a, b any) bool {
+	af, aok := toFloat(a)
+	bf, bok := toFloat(b)
+	if !aok || !bok {
+		return false
+	}
+	shift := math.Pow(10, float64(n.precision))
+	return math.Round(af*shift) == math.Round(bf*shift)
+}
+
+func equalSorted(a, b any) bool {
+	as, aok := toSortedStrings(a)
+	bs, bok := toSortedStrings(b)
+	if !aok || !bok || len(as) != len(bs) {
+		return false
+	}
+	for i := range as {
+		if as[i] != bs[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Post-hoc variant: the engine renders values to strings, so only the
@@ -309,24 +320,31 @@ func split(s string) []string {
 	return parts
 }
 
+// Greedy single-pass matching: on a mismatch, rewind to one segment past the
+// last "**" and try again. Recursing at every "**" instead is exponential —
+// "**/**/**/**" against a long path took longer than a fuzz worker will wait.
 func matchSegments(pattern, path []string) bool {
-	if len(pattern) == 0 {
-		return len(path) == 0
-	}
-	if pattern[0] == "**" {
-		// Match zero or more segments here, then the rest of the pattern.
-		for i := 0; i <= len(path); i++ {
-			if matchSegments(pattern[1:], path[i:]) {
-				return true
-			}
+	pi, si := 0, 0
+	star, rewind := -1, 0
+	for si < len(path) {
+		switch {
+		case pi < len(pattern) && pattern[pi] == "**":
+			star, rewind = pi, si
+			pi++
+		case pi < len(pattern) && (pattern[pi] == "*" || pattern[pi] == path[si]):
+			pi++
+			si++
+		case star >= 0:
+			// Let the last "**" swallow one more segment.
+			rewind++
+			pi, si = star+1, rewind
+		default:
+			return false
 		}
-		return false
 	}
-	if len(path) == 0 {
-		return false
+	// Trailing "**" are free; anything else still owed is a mismatch.
+	for pi < len(pattern) && pattern[pi] == "**" {
+		pi++
 	}
-	if pattern[0] != "*" && pattern[0] != path[0] {
-		return false
-	}
-	return matchSegments(pattern[1:], path[1:])
+	return pi == len(pattern)
 }

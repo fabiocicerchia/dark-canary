@@ -32,6 +32,8 @@ from an edge that already mirrors. Everything downstream is identical.
 | Package | Responsibility |
 | --- | --- |
 | `cmd/dark-canary/proxy.go` | proxy mode: routes traffic, mirrors, captures both sides |
+| `cmd/dark-canary/config.go` | the flag surface, folded into the safety config, the ruleset and the upstreams |
+| `cmd/dark-canary/exit.go` | which failure exits with which code |
 | `cmd/dark-canary/dashboard.*` | the embedded HTML view; polls `/report` and `/stats` |
 | `internal/collector` | correlates the two captures into a pair; bounded, with a timeout |
 | `internal/diff` | structural comparison — **the product** |
