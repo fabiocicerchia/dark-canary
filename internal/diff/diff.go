@@ -254,41 +254,48 @@ func (e *structural) walk(path string, a, b any, s *sink) {
 
 	switch av := a.(type) {
 	case map[string]any:
-		bv := b.(map[string]any)
-		for _, key := range sortedKeys(av, bv) {
-			childPath := path + "/" + escapeToken(key)
-			left, hasLeft := av[key]
-			right, hasRight := bv[key]
-			switch {
-			case hasLeft && !hasRight:
-				s.add(KindBodyKey, childPath, left, nil)
-			case !hasLeft && hasRight:
-				s.add(KindBodyKey, childPath, nil, right)
-			default:
-				e.walk(childPath, left, right, s)
-			}
-		}
+		e.walkObject(path, av, b.(map[string]any), s)
 	case []any:
-		bv := b.([]any)
-		// The whole array is offered to the noise rules first: "these two
-		// arrays are the same set in a different order" is a judgement only the
-		// rules can make, and it cannot be made from per-index differences
-		// after the fact.
-		if s.suppressed(path, a, b) {
-			return
-		}
-		if len(av) != len(bv) {
-			// Length first: without it, one inserted element reports every
-			// subsequent index as different and buries the actual change.
-			s.add(KindShape, path, fmt.Sprintf("%d items", len(av)), fmt.Sprintf("%d items", len(bv)))
-		}
-		for i := 0; i < min(len(av), len(bv)); i++ {
-			e.walk(path+"/"+strconv.Itoa(i), av[i], bv[i], s)
-		}
+		e.walkArray(path, av, b.([]any), s)
 	default:
 		if !scalarEqual(a, b) {
 			s.add(KindBodyVal, path, a, b)
 		}
+	}
+}
+
+// walkObject compares two objects key by key. A key on one side only is its own
+// kind, not a value difference: a client that expects the field will break.
+func (e *structural) walkObject(path string, a, b map[string]any, s *sink) {
+	for _, key := range sortedKeys(a, b) {
+		childPath := path + "/" + escapeToken(key)
+		left, hasLeft := a[key]
+		right, hasRight := b[key]
+		switch {
+		case hasLeft && !hasRight:
+			s.add(KindBodyKey, childPath, left, nil)
+		case !hasLeft && hasRight:
+			s.add(KindBodyKey, childPath, nil, right)
+		default:
+			e.walk(childPath, left, right, s)
+		}
+	}
+}
+
+// walkArray offers the whole array to the noise rules first: "these two arrays
+// are the same set in a different order" is a judgement only the rules can make,
+// and it cannot be made from per-index differences after the fact.
+func (e *structural) walkArray(path string, a, b []any, s *sink) {
+	if s.suppressed(path, a, b) {
+		return
+	}
+	if len(a) != len(b) {
+		// Length first: without it, one inserted element reports every
+		// subsequent index as different and buries the actual change.
+		s.add(KindShape, path, fmt.Sprintf("%d items", len(a)), fmt.Sprintf("%d items", len(b)))
+	}
+	for i := 0; i < min(len(a), len(b)); i++ {
+		e.walk(path+"/"+strconv.Itoa(i), a[i], b[i], s)
 	}
 }
 

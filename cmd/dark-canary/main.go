@@ -12,9 +12,9 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -30,81 +30,52 @@ import (
 	"github.com/fabiocicerchia/dark-canary/internal/safety"
 )
 
+const (
+	// tokenHeader carries the shared secret on every guarded endpoint. The
+	// dashboard and the Helm chart's NOTES.txt spell it out too, so it is a
+	// protocol value, not a detail of the check.
+	tokenHeader = "X-Dark-Canary-Token"
+
+	// readHeaderTimeout bounds a client that opens a connection and dawdles over
+	// the request line. Both listeners get it; the proxy one is in the request
+	// path, so a slowloris there is a production outage rather than a nuisance.
+	readHeaderTimeout = 5 * time.Second
+
+	// shutdownGrace is how long in-flight requests have to finish after SIGTERM
+	// before the listeners are cut. Shorter than a typical pod terminationGrace
+	// so the process is gone before the kill.
+	shutdownGrace = 5 * time.Second
+)
+
+// Only idempotent methods are mirrored. Shared by the proxy's mirror decision
+// and the collector's refusal to accept a capture of anything else.
+var idempotent = map[string]bool{http.MethodGet: true, http.MethodHead: true, http.MethodOptions: true}
+
 func main() {
+	// One logger for the whole process: diagnostics on stderr, INFO by default.
+	// There is no -v flag to read a level from, and adding one is a feature.
+	// The report is not a diagnostic and never goes through this — it is the
+	// tool's output, and it stays a plain write.
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+
 	if err := run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		fmt.Fprintln(os.Stderr, "dark-canary:", err)
-		os.Exit(1)
+		slog.Error("dark-canary failed", "err", err)
+		os.Exit(exitCode(err))
 	}
 }
 
-func run() error {
-	var (
-		// Loopback by default. Captures carry response bodies from production
-		// traffic, and /report serves them back — binding every interface with
-		// no auth would make this the softest target on the network.
-		listen     = flag.String("listen", "127.0.0.1:8099", "address to accept captures on")
-		token      = flag.String("token", "", "shared secret required in X-Dark-Canary-Token; mandatory when -listen is not loopback")
-		rulesPath  = flag.String("rules", "", "noise ruleset (YAML); merged on top of the built-in defaults")
-		timeout    = flag.Duration("correlate-timeout", 30*time.Second, "how long a lone capture waits for its partner")
-		maxPending = flag.Int("max-pending", 10_000, "bound on unpaired captures held in memory")
-		killFile   = flag.String("kill-file", safety.Default().KillFile, "path whose existence stops all processing")
-		maxBody    = flag.Int("max-body", safety.Default().MaxBodyBytes, "largest capture body accepted, in bytes")
-		writes     = flag.Bool("allow-write-mirroring", false, "accept captures of non-idempotent requests (REAL WRITES on the shadow)")
-		scrub      = flag.String("scrub", "", "comma-separated body fields to redact on arrival")
-		interval   = flag.Duration("report-every", 0, "print the report to stderr on this interval (0 = only on request)")
-
-		// Proxy mode: dark-canary does the routing itself, no nginx, no Lua.
-		primary     = flag.String("primary", "", "upstream that answers the client, e.g. http://127.0.0.1:9001 (enables proxy mode)")
-		shadow      = flag.String("shadow", "", "upstream mirrored to and discarded, e.g. http://127.0.0.1:9002")
-		proxyListen = flag.String("proxy-listen", "127.0.0.1:8080", "address to serve proxied traffic on")
-		sample      = flag.Float64("sample", safety.Default().SampleRate, "fraction of eligible requests mirrored to the shadow")
-		shadowTO    = flag.Duration("shadow-timeout", 10*time.Second, "how long a mirrored request may take before it is abandoned")
-		inflight    = flag.Int("max-inflight", 64, "bound on mirrored requests in flight; over this, requests are served but not mirrored")
-	)
-	flag.Parse()
-
-	cfg := safety.Default()
-	cfg.KillFile = *killFile
-	cfg.MaxBodyBytes = *maxBody
-	cfg.MirrorReadsOnly = !*writes
-	cfg.ScrubFields = splitList(*scrub)
-	cfg.SampleRate = *sample
-
-	if err := cfg.Validate(); err != nil {
-		if !errors.Is(err, safety.ErrWriteMirroringEnabled) {
-			return err
-		}
-		// Supported, but never silent.
-		fmt.Fprintln(os.Stderr, "dark-canary: WARNING:", err)
+// shutdownOn drains both listeners once the signal context is cancelled, giving
+// in-flight requests shutdownGrace to finish before they are cut.
+func shutdownOn(ctx context.Context, servers ...*http.Server) {
+	<-ctx.Done()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
+	defer cancel()
+	for _, srv := range servers {
+		_ = srv.Shutdown(shutdownCtx)
 	}
+}
 
-	// Refuse to be reachable and unauthenticated at the same time. Failing at
-	// startup is the only place this can be caught before the data is exposed.
-	if !isLoopback(*listen) && *token == "" {
-		return fmt.Errorf("-listen %s is not loopback: set -token, or bind to 127.0.0.1", *listen)
-	}
-
-	rules := noise.Default()
-	if *rulesPath != "" {
-		loaded, err := noise.Load(*rulesPath)
-		if err != nil {
-			return err
-		}
-		rules = rules.Merge(loaded)
-	}
-
-	srv := newServer(cfg, rules, collector.Options{Timeout: *timeout, MaxPending: *maxPending})
-	srv.token = *token
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	go srv.consume(ctx)
-	go srv.sweep(ctx, *timeout)
-	if *interval > 0 {
-		go srv.periodic(ctx, *interval)
-	}
-
+func routes(srv *server) {
 	http.Handle("/captures", http.HandlerFunc(srv.handleCapture))
 	http.Handle("/report", http.HandlerFunc(srv.handleReport))
 	http.Handle("/stats", http.HandlerFunc(srv.handleStats))
@@ -113,38 +84,56 @@ func run() error {
 		_, _ = fmt.Fprintln(w, "ok")
 	}))
 	http.Handle("/", http.HandlerFunc(srv.handleDashboard))
+}
 
-	httpSrv := &http.Server{Addr: *listen, ReadHeaderTimeout: 5 * time.Second}
-	proxySrv := &http.Server{Addr: *proxyListen, ReadHeaderTimeout: 5 * time.Second}
+func run() error {
+	o := parseFlags()
+
+	cfg, warn, err := o.safetyConfig()
+	if warn != nil {
+		// Supported, but never silent.
+		slog.Warn("write mirroring is enabled", "warning", warn)
+	}
+	if err != nil {
+		return err
+	}
+
+	rules, err := o.rules()
+	if err != nil {
+		return err
+	}
+	primaryURL, shadowURL, err := o.upstreams()
+	if err != nil {
+		return err
+	}
+
+	srv := newServer(cfg, rules, collector.Options{Timeout: o.timeout, MaxPending: o.maxPending})
+	srv.token = o.token
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go srv.consume(ctx)
+	go srv.sweep(ctx, o.timeout)
+	if o.interval > 0 {
+		go srv.periodic(ctx, o.interval)
+	}
+	routes(srv)
+
+	httpSrv := &http.Server{Addr: o.listen, ReadHeaderTimeout: readHeaderTimeout}
+	proxySrv := &http.Server{Addr: o.proxyListen, ReadHeaderTimeout: readHeaderTimeout}
 	// Buffered, so whichever listener dies first records why without waiting for
 	// anyone to be reading.
 	fatal := make(chan error, 2)
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = httpSrv.Shutdown(shutdownCtx)
-		_ = proxySrv.Shutdown(shutdownCtx)
-	}()
+	go shutdownOn(ctx, httpSrv, proxySrv)
 
 	// Proxy mode is opt-in: without -primary this is the collector it has always
 	// been, fed by something else at the edge.
-	if *primary != "" {
-		if *shadow == "" {
-			return fmt.Errorf("-primary needs -shadow: with nothing to mirror to there is nothing to compare")
-		}
-		primaryURL, err := parseUpstream("primary", *primary)
-		if err != nil {
-			return err
-		}
-		shadowURL, err := parseUpstream("shadow", *shadow)
-		if err != nil {
-			return err
-		}
-		proxySrv.Handler = newProxy(srv, primaryURL, shadowURL, cfg.SampleRate, *shadowTO, *inflight)
+	if primaryURL != nil {
+		proxySrv.Handler = newProxy(srv, primaryURL, shadowURL, cfg.SampleRate, o.shadowTO, o.inflight)
 		go func() {
-			fmt.Fprintf(os.Stderr, "dark-canary proxying %s → %s (shadow %s) — sample=%g\n",
-				*proxyListen, primaryURL, shadowURL, cfg.SampleRate)
+			slog.Info("proxying", "listen", o.proxyListen, "primary", primaryURL,
+				"shadow", shadowURL, "sample", cfg.SampleRate)
 			if err := proxySrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				// The proxy is the request path: failing to bind it is fatal,
 				// and must exit non-zero. Reporting it only on stderr would
@@ -153,13 +142,11 @@ func run() error {
 				stop()
 			}
 		}()
-	} else if *shadow != "" {
-		return fmt.Errorf("-shadow needs -primary: proxy mode routes to both or neither")
 	}
 
-	fmt.Fprintf(os.Stderr, "dark-canary listening on %s — reads-only=%v kill-file=%s\n",
-		*listen, cfg.MirrorReadsOnly, cfg.KillFile)
-	err := httpSrv.ListenAndServe()
+	slog.Info("listening", "addr", o.listen,
+		"reads_only", cfg.MirrorReadsOnly, "kill_file", cfg.KillFile)
+	err = httpSrv.ListenAndServe()
 
 	// A listener that never came up has no report to give, and printing an empty
 	// one ahead of the real error reads as "nothing is being compared" when the
@@ -208,7 +195,7 @@ func (s *server) authorised(r *http.Request) bool {
 	if s.token == "" {
 		return true
 	}
-	return subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Dark-Canary-Token")), []byte(s.token)) == 1
+	return subtle.ConstantTimeCompare([]byte(r.Header.Get(tokenHeader)), []byte(s.token)) == 1
 }
 
 func newServer(cfg safety.Config, rules noise.Ruleset, opts collector.Options) *server {
@@ -221,8 +208,6 @@ func newServer(cfg safety.Config, rules noise.Ruleset, opts collector.Options) *
 		agg:      report.New(nil),
 	}
 }
-
-var idempotent = map[string]bool{http.MethodGet: true, http.MethodHead: true, http.MethodOptions: true}
 
 func (s *server) handleCapture(w http.ResponseWriter, r *http.Request) {
 	if !s.authorised(r) {
@@ -345,6 +330,14 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 	_ = report.Text(w, summary)
 }
 
+// statsResponse is the body of /stats. It has a name because it is a wire
+// contract, not a local: the dashboard reads stats.kill_switch_engaged, so the
+// field tags cannot be changed without changing the page with them.
+type statsResponse struct {
+	Collector collector.Stats `json:"collector"`
+	Kill      bool            `json:"kill_switch_engaged"`
+}
+
 // The first question of any shadow deployment is "why is nothing being
 // compared", and this is the answer: what arrived, what paired, what expired.
 func (s *server) handleStats(w http.ResponseWriter, r *http.Request) {
@@ -355,10 +348,7 @@ func (s *server) handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(struct {
-		Collector collector.Stats `json:"collector"`
-		Kill      bool            `json:"kill_switch_engaged"`
-	}{s.buf.Stats(), s.kill.Engaged()})
+	_ = enc.Encode(statsResponse{Collector: s.buf.Stats(), Kill: s.kill.Engaged()})
 }
 
 func splitList(s string) []string {

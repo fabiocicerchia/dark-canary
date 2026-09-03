@@ -104,6 +104,30 @@ the tool exists to produce.
 502, but no capture is made, so the counters stay at zero and look identical to
 "no traffic yet". Proxy-level error counters are not implemented.
 
+## When it refuses to start
+
+Diagnostics go to stderr as `key=value` lines through the standard library's
+structured logger — `level=INFO` for the two startup lines, `level=WARN` for
+write mirroring, `level=ERROR` immediately before a non-zero exit. The report
+itself is not a diagnostic and is printed plain, on stderr for `-report-every`
+and on the way out, and served on stdout of whatever `curl`s `/report`.
+
+The exit code says which kind of refusal it was, following `sysexits(3)`, so a
+supervisor can tell a typo from a taken port without parsing the message:
+
+| Code | Meaning | Example |
+| --- | --- | --- |
+| `0` | stopped cleanly | SIGTERM, or SIGINT |
+| `64` | a flag, or a combination of flags, the tool refuses | `-sample 5`; `-primary` without `-shadow`; a non-loopback `-listen` with no `-token` |
+| `65` | `-rules` was read but does not hold up | a rule that neither ignores nor normalises |
+| `66` | the `-rules` file is not there | `-rules /nonexistent.yaml` |
+| `70` | a failure with no better classification — report it | — |
+| `71` | the OS refused a listener | `bind: address already in use` |
+
+Every one of these is a refusal to start, not a degraded run: the process never
+binds a listener it could not have bound safely, and the non-loopback-without-a-token
+check in particular still stops the process outright.
+
 ## Before pointing it at production
 
 - Leave `-sample` low. 1% is the default for a reason.
