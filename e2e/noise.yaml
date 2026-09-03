@@ -1,0 +1,77 @@
+# Noise suppression tuned against the e2e demo pair.
+#
+# Every rule here was added because the harness reported the difference it
+# suppresses, and each one says WHY. That is the discipline the repo asks for:
+# a rule nobody can explain is a rule nobody dares delete, and a ruleset that
+# grows by guesswork ends up hiding the finding it was supposed to surface.
+#
+# Merged ON TOP of noise.Default(), which already covers Date, Server,
+# X-Request-Id and friends — the differences every pair of servers has.
+
+rules:
+  # --- headers ---------------------------------------------------------------
+  - path: /headers/x-served-by
+    ignore: true
+    reason: >-
+      names the process that answered, which is the one thing the two sides
+      must differ on
+
+  # --- ids and clocks --------------------------------------------------------
+  - path: /body/**/trace_id
+    ignore: true
+    reason: >-
+      unique per request by construction; equality here would mean the shadow
+      was replaying
+
+  - path: /body/**/cursor
+    ignore: true
+    reason: opaque pagination token, regenerated per response
+
+  - path: /body/**/served_at
+    ignore: true
+    reason: >-
+      wall clock at response time; the two sides are never called in the same
+      nanosecond
+
+  - path: /body/**/generated
+    ignore: true
+    reason: as served_at
+
+  # Added because the harness reported it: 358 of 381 pairs, 94%, "13" vs "39".
+  #
+  # The first attempt was `normalise: len`, on the reasoning that a shadow an
+  # order of magnitude slower is a finding. That was wrong twice over. `len` is
+  # for strings and arrays, so on a number it does nothing — and even if it
+  # had worked, it is the wrong idea: a duration in a response body measures
+  # the SERVER, not its answer. dark-canary compares behaviour. Latency
+  # belongs in latency metrics, where it can be read as a distribution rather
+  # than as a per-request equality, and leaving it here buried the one real
+  # finding under a 94%-rate group.
+  - path: /body/**/duration_ms
+    ignore: true
+    reason: |
+      how long the server took, not what it answered. Two processes never agree
+      on it, and comparing it per request drowns real findings — check latency
+      in latency metrics.
+
+  # --- ordering --------------------------------------------------------------
+  - path: /body/items
+    normalise: sort
+    reason: >-
+      two processes iterate a map in two orders; the SET is what the API
+      promises
+
+  # --- float precision -------------------------------------------------------
+  # The narrowest rule that works, on purpose. `ignore` here would have hidden
+  # the bug this harness exists to find: the discount field is on the same
+  # object, and a rule that stopped comparing the object would have taken both.
+  - path: /body/total
+    normalise: round:2
+    reason: |
+      float addition is not associative, so summing the same line items in a
+      different order differs in the last place. Rounded to the currency's own
+      precision, which is the precision anything downstream actually uses.
+
+  - path: /body/lines/*
+    normalise: round:2
+    reason: as total, per line item

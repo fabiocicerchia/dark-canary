@@ -2,7 +2,7 @@ BINARY  := dark-canary
 BIN_DIR := bin
 PKG     := ./cmd/dark-canary
 
-.PHONY: all build test test-lua tidy clean help lint setup
+.PHONY: all build test test-lua e2e tidy clean help lint setup
 
 .DEFAULT_GOAL := help
 
@@ -26,6 +26,13 @@ test:
 ## test-lua: run the capture hook's tests (any Lua 5.1+, no luarocks needed)
 test-lua:
 	lua lua/dark_canary_test.lua
+
+## e2e: mirror a real service against a real shadow, end to end
+# Separate from `test` because it compiles and execs the binary, binds four
+# ports and runs for tens of seconds. `test` is what you run on every save;
+# this is what you run before believing the product works.
+e2e: build
+	go test -tags e2e -count=1 -timeout 5m ./e2e/...
 
 ## tidy: tidy modules
 tidy:
