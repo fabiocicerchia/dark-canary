@@ -59,7 +59,7 @@ jobs:
       # a new stdlib CVE lands without anyone touching the repo.
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
           govulncheck ./...
 
   codeql:
