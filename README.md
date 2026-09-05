@@ -33,7 +33,7 @@ make build      # -> ./bin/
 
 Point it at two upstreams and send it traffic. No nginx, no Lua, no config file.
 
-```
+```bash
 make build
 ./bin/dark-canary -rules noise.example.yaml \
   -primary http://127.0.0.1:9001 \
@@ -44,7 +44,7 @@ curl 127.0.0.1:8080/orders/7      # served by the primary, mirrored to the shado
 curl 127.0.0.1:8099/report
 ```
 
-```
+```text
 1 pairs compared over 2s
 0 identical (0.0% agreement), 1 divergent, 4 differences suppressed by noise rules
 
