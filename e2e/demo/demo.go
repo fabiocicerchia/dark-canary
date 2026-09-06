@@ -20,11 +20,18 @@
 // the shadow drops a field for a particular class of input. The whole design
 // claim is that noise suppression makes that bug legible. If the harness
 // reports the bug and nothing else, the claim holds; if it drowns, it does not.
+// Everything in this file is deliberately non-deterministic between the two
+// sides: the wall clock, the shuffle, the per-response ids. That noise is
+// what the harness has to see through, so it is the fixture, not a defect.
+// fixture server has nobody to report a failed write to.
+//
+//nolint:forbidigo,errcheck // see above: the clock is the point, and a
 package demo
 
 import (
 	"encoding/json"
 	"fmt"
+
 	// Deliberate, and crypto/rand would break it: the point of this service is
 	// SEEDED, reproducible noise that differs between the two sides. Nothing
 	// here is a token, an id anyone trusts, or a security decision — it is
