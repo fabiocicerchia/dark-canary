@@ -178,7 +178,9 @@ func TestMalformedRequestsAreRejectedCleanly(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	s.handleCapture(rec, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/captures", strings.NewReader("{not json")))
+	bad := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/captures",
+		strings.NewReader("{not json"))
+	s.handleCapture(rec, bad)
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("malformed body = %d, want 400", rec.Code)
 	}

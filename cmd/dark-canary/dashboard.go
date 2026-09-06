@@ -24,7 +24,9 @@ func (s *server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	// The page loads nothing it did not ship with; say so, so a stray injection
 	// has nowhere to fetch from.
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'")
+	w.Header().Set("Content-Security-Policy",
+		"default-src 'none'; style-src 'unsafe-inline'; "+
+			"script-src 'unsafe-inline'; connect-src 'self'")
 	//nolint:errcheck // the status is already sent; a browser that hung up
 	// mid-write leaves nothing to report
 	_, _ = w.Write(dashboardHTML)
