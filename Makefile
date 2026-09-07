@@ -2,7 +2,7 @@ BINARY  := dark-canary
 BIN_DIR := bin
 PKG     := ./cmd/dark-canary
 
-.PHONY: all build test test-lua e2e tidy clean help lint setup
+.PHONY: all build test test-lua e2e tidy clean help lint setup install run format analyze
 
 .DEFAULT_GOAL := help
 
@@ -47,3 +47,15 @@ setup: ## Install the pre-commit hook
 
 lint: ## Run all pre-commit checks on the whole tree
 	pre-commit run --all-files
+
+install: ## Install the binary into GOBIN
+	go install ./...
+
+run: ## Run the binary
+	go run ./cmd/dark-canary $(ARGS)
+
+format: ## Rewrite the sources to gofmt form
+	gofmt -w .
+
+analyze: ## Lint with the house rule set
+	golangci-lint run ./...
