@@ -10,7 +10,7 @@ make e2e     # builds the binary, then runs the harness
 
 ## What it stands up
 
-```
+```text
   load loop ──► dark-canary (proxy) ──► primary   ──► the user's answer
                       │
                       └──────────────► shadow    ──► discarded, captured
@@ -46,7 +46,7 @@ along with it is worse.
 
 Typical run:
 
-```
+```text
 pairs=381 identical=305 divergent=76 suppressed=1997
 ```
 

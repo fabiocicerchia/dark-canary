@@ -6,7 +6,7 @@ One process. Traffic goes in the proxy port, the primary answers the client, a
 copy goes to the shadow and is discarded after being captured, and the two
 captures are correlated, diffed and aggregated in memory.
 
-```
+```text
                     ┌──────────────── dark-canary ────────────────┐
                     │                                             │
 client ──:8088──────┼──► proxy ──────────────► primary ───────────┼──► response
@@ -29,18 +29,18 @@ from an edge that already mirrors. Everything downstream is identical.
 
 ## Components
 
-| Package | Responsibility |
-| --- | --- |
-| `cmd/dark-canary/proxy.go` | proxy mode: routes traffic, mirrors, captures both sides |
-| `cmd/dark-canary/config.go` | the flag surface, folded into the safety config, the ruleset and the upstreams |
-| `cmd/dark-canary/exit.go` | which failure exits with which code |
-| `cmd/dark-canary/dashboard.*` | the embedded HTML view; polls `/report` and `/stats` |
-| `internal/collector` | correlates the two captures into a pair; bounded, with a timeout |
-| `internal/diff` | structural comparison — **the product** |
-| `internal/noise` | declarative suppression rules, consulted *during* comparison |
-| `internal/safety` | reads-only, sampling, PII scrub, kill switch, body caps |
-| `internal/report` | grouping and ranking by severity then frequency |
-| `lua/dark_canary.lua` | optional edge hook for collector mode; needs `nginx-lua-waf-kit` |
+| Package                       | Responsibility                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `cmd/dark-canary/proxy.go`    | proxy mode: routes traffic, mirrors, captures both sides                       |
+| `cmd/dark-canary/config.go`   | the flag surface, folded into the safety config, the ruleset and the upstreams |
+| `cmd/dark-canary/exit.go`     | which failure exits with which code                                            |
+| `cmd/dark-canary/dashboard.*` | the embedded HTML view; polls `/report` and `/stats`                           |
+| `internal/collector`          | correlates the two captures into a pair; bounded, with a timeout               |
+| `internal/diff`               | structural comparison — **the product**                                        |
+| `internal/noise`              | declarative suppression rules, consulted *during* comparison                   |
+| `internal/safety`             | reads-only, sampling, PII scrub, kill switch, body caps                        |
+| `internal/report`             | grouping and ranking by severity then frequency                                |
+| `lua/dark_canary.lua`         | optional edge hook for collector mode; needs `nginx-lua-waf-kit`               |
 
 ## Data flow
 
@@ -48,19 +48,19 @@ from an edge that already mirrors. Everything downstream is identical.
    and the in-flight bound *before* anything is forwarded. Deciding once is what
    stops the two captures disagreeing about whether a request is being compared —
    half a pair is worse than none, because it expires and skews the stats.
-2. **Serve the primary.** `httputil.ReverseProxy` forwards and streams the
+1. **Serve the primary.** `httputil.ReverseProxy` forwards and streams the
    response back. The capture is teed out of that stream rather than buffered, so
    streaming responses and large downloads still work.
-3. **Mirror to the shadow.** A clone of the request — taken before the primary is
+1. **Mirror to the shadow.** A clone of the request — taken before the primary is
    served, since `ReverseProxy` owns the original from that point — on a detached
    context with its own timeout, in a goroutine holding one of `-max-inflight`
    slots. Its response is read, captured, and discarded.
-4. **Ingest.** Both captures go through `server.ingest`, the one door into the
+1. **Ingest.** Both captures go through `server.ingest`, the one door into the
    buffer, so scrubbing and body caps apply on every path — including captures
    the process made itself.
-5. **Correlate.** The collector holds unpaired captures until their partner
+1. **Correlate.** The collector holds unpaired captures until their partner
    arrives or `-correlate-timeout` expires.
-6. **Diff and aggregate.** Each pair is compared structurally, with noise rules
+1. **Diff and aggregate.** Each pair is compared structurally, with noise rules
    consulted as the walk happens, and folded into the running report.
 
 ## Decisions
@@ -218,7 +218,7 @@ correlation window. Point `/report?format=json` at whatever already stores thing
 
 ## Tests
 
-```
+```bash
 make test      # components, in isolation
 make e2e       # the whole thing, against two real services
 ```

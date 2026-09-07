@@ -24,10 +24,10 @@ make build          # → ./bin/dark-canary
 
 Two listeners come up:
 
-| Port | What |
-| --- | --- |
-| `8088` (`-proxy-listen`) | your traffic — send requests here instead of to the primary |
-| `8099` (`-listen`) | dashboard at `/`, plus `/report`, `/stats`, `/captures`, `/healthz` |
+| Port                     | What                                                                |
+| ------------------------ | ------------------------------------------------------------------- |
+| `8088` (`-proxy-listen`) | your traffic — send requests here instead of to the primary         |
+| `8099` (`-listen`)       | dashboard at `/`, plus `/report`, `/stats`, `/captures`, `/healthz` |
 
 Send it traffic and open the dashboard:
 
@@ -45,7 +45,7 @@ shares with production.
 
 ## Reading the report
 
-```
+```text
 5 pairs compared over 2s
 0 identical (0.0% agreement), 5 divergent, 20 differences suppressed by noise rules
 
@@ -79,15 +79,15 @@ for; a rule nobody can explain is a rule nobody dares delete. See
 curl 127.0.0.1:8099/stats
 ```
 
-| Symptom | Cause |
-| --- | --- |
-| `curl` gets **502**, all counters `0` | the primary is down or `-primary` is wrong — no response existed to capture |
-| all counters `0`, no 502 | nothing is being mirrored: check `-sample`, whether the method is idempotent under reads-only, and whether the kill file exists |
-| `received` climbs, `paired` stays `0` | only one side is arriving; in collector mode, the two captures carry different `correl_id`s |
-| `expired` climbs | a partner never arrived within `-correlate-timeout` |
-| `dropped` climbs | the diff engine is behind and the buffer is full — raise `-max-pending` |
-| `discarded` climbs | malformed captures: no correlation id, or an unknown `path` |
-| `bind: address already in use` | an earlier instance is still running — `pkill -f bin/dark-canary` |
+| Symptom                               | Cause                                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `curl` gets **502**, all counters `0` | the primary is down or `-primary` is wrong — no response existed to capture                                                     |
+| all counters `0`, no 502              | nothing is being mirrored: check `-sample`, whether the method is idempotent under reads-only, and whether the kill file exists |
+| `received` climbs, `paired` stays `0` | only one side is arriving; in collector mode, the two captures carry different `correl_id`s                                     |
+| `expired` climbs                      | a partner never arrived within `-correlate-timeout`                                                                             |
+| `dropped` climbs                      | the diff engine is behind and the buffer is full — raise `-max-pending`                                                         |
+| `discarded` climbs                    | malformed captures: no correlation id, or an unknown `path`                                                                     |
+| `bind: address already in use`        | an earlier instance is still running — `pkill -f bin/dark-canary`                                                               |
 
 A **502 with every counter at zero is the common first-run case**: the upstreams
 are not up. Two throwaway ones, if you just want to watch it work:
@@ -115,14 +115,14 @@ and on the way out, and served on stdout of whatever `curl`s `/report`.
 The exit code says which kind of refusal it was, following `sysexits(3)`, so a
 supervisor can tell a typo from a taken port without parsing the message:
 
-| Code | Meaning | Example |
-| --- | --- | --- |
-| `0` | stopped cleanly | SIGTERM, or SIGINT |
+| Code | Meaning                                             | Example                                                                              |
+| ---- | --------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `0`  | stopped cleanly                                     | SIGTERM, or SIGINT                                                                   |
 | `64` | a flag, or a combination of flags, the tool refuses | `-sample 5`; `-primary` without `-shadow`; a non-loopback `-listen` with no `-token` |
-| `65` | `-rules` was read but does not hold up | a rule that neither ignores nor normalises |
-| `66` | the `-rules` file is not there | `-rules /nonexistent.yaml` |
-| `70` | a failure with no better classification — report it | — |
-| `71` | the OS refused a listener | `bind: address already in use` |
+| `65` | `-rules` was read but does not hold up              | a rule that neither ignores nor normalises                                           |
+| `66` | the `-rules` file is not there                      | `-rules /nonexistent.yaml`                                                           |
+| `70` | a failure with no better classification — report it | —                                                                                    |
+| `71` | the OS refused a listener                           | `bind: address already in use`                                                       |
 
 Every one of these is a refusal to start, not a degraded run: the process never
 binds a listener it could not have bound safely, and the non-loopback-without-a-token
@@ -171,7 +171,7 @@ apply identically — there is no path into the buffer that skips scrubbing.
 
 ## Deploying it
 
-```
+```bash
 docker build -t dark-canary .
 docker run -p 8080:8080 -p 8099:8099 dark-canary \
   -listen 0.0.0.0:8099 -token "$TOKEN" \
