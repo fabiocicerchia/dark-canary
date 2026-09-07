@@ -49,7 +49,7 @@ func TestProxyServesPrimaryAndDiffsTheShadow(t *testing.T) {
 	shadow, shadowGot := upstream(t, `{"total":10.001,"state":"PAID"}`)
 	front := testProxy(t, srv, primary, shadow)
 
-	resp, err := http.Get(front.URL + "/orders/7")
+	resp, err := httpGet(t, front.URL+"/orders/7")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestBrokenShadowNeverReachesTheClient(t *testing.T) {
 	t.Cleanup(shadow.Close)
 	front := testProxy(t, srv, primary, shadow)
 
-	resp, err := http.Get(front.URL + "/health")
+	resp, err := httpGet(t, front.URL+"/health")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestReadsOnlyStopsTheShadowFromBeingWrittenTo(t *testing.T) {
 	shadow, shadowGot := upstream(t, `{"ok":true}`)
 	front := testProxy(t, srv, primary, shadow)
 
-	resp, err := http.Post(front.URL+"/orders", "application/json", strings.NewReader(`{"buy":1}`))
+	resp, err := httpPost(t, front.URL+"/orders", strings.NewReader(`{"buy":1}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestKillSwitchStopsMirroringNotServing(t *testing.T) {
 	shadow, shadowGot := upstream(t, `{"ok":true}`)
 	front := testProxy(t, srv, primary, shadow)
 
-	resp, err := http.Get(front.URL + "/still-serving")
+	resp, err := httpGet(t, front.URL+"/still-serving")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,4 +156,27 @@ func waitForPair(t *testing.T, s *server) (p collector.Pair) {
 		t.Fatalf("no pair after 2s; stats: %+v", s.buf.Stats())
 	}
 	return
+}
+
+// The tests reach the proxy over real HTTP. http.Get and http.Post build a
+// request with no context, so a front end that never answers hangs the whole
+// package rather than the one test. These carry the test's context.
+
+func httpGet(t *testing.T, url string) (*http.Response, error) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatalf("building GET %s: %v", url, err)
+	}
+	return http.DefaultClient.Do(req)
+}
+
+func httpPost(t *testing.T, url string, body io.Reader) (*http.Response, error) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, url, body)
+	if err != nil {
+		t.Fatalf("building POST %s: %v", url, err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	return http.DefaultClient.Do(req)
 }

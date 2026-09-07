@@ -22,6 +22,9 @@ import (
 // Kind classifies a single difference.
 type Kind string
 
+// The kinds of difference, roughly in descending order of how much they
+// mean: a status change is a behaviour change, a value change may be a
+// rounding difference nobody has written a rule for yet.
 const (
 	KindStatus  Kind = "status"
 	KindHeader  Kind = "header"
@@ -103,6 +106,8 @@ type Options struct {
 
 const defaultMaxValueLen = 200
 
+// NewEngine returns the structural engine: it compares decoded JSON rather
+// than bytes, so key order and whitespace are not reported as divergence.
 func NewEngine(opts Options) Engine {
 	if opts.MaxValueLen <= 0 {
 		opts.MaxValueLen = defaultMaxValueLen
@@ -254,9 +259,11 @@ func (e *structural) walk(path string, a, b any, s *sink) {
 
 	switch av := a.(type) {
 	case map[string]any:
+		//nolint:errcheck // typeName(a) == typeName(b) above, and typeName is
+		// one name per concrete type: b is an object here
 		e.walkObject(path, av, b.(map[string]any), s)
 	case []any:
-		e.walkArray(path, av, b.([]any), s)
+		e.walkArray(path, av, b.([]any), s) //nolint:errcheck // as above: b is an array
 	default:
 		if !scalarEqual(a, b) {
 			s.add(KindBodyVal, path, a, b)

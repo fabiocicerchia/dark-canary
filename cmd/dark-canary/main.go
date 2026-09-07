@@ -68,10 +68,14 @@ func main() {
 // in-flight requests shutdownGrace to finish before they are cut.
 func shutdownOn(ctx context.Context, servers ...*http.Server) {
 	<-ctx.Done()
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
+	// WithoutCancel, not Background: the shutdown deadline is its own, but
+	// whatever the signal context carries stays with it.
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownGrace)
 	defer cancel()
 	for _, srv := range servers {
-		_ = srv.Shutdown(shutdownCtx)
+		// Shutdown returns the grace-period deadline, which is expected: the
+		// process is going away next line either way.
+		_ = srv.Shutdown(shutdownCtx) //nolint:errcheck // see above
 	}
 }
 
@@ -81,7 +85,7 @@ func routes(srv *server) {
 	http.Handle("/stats", http.HandlerFunc(srv.handleStats))
 	http.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Nothing to do if the probe hung up mid-write; the status is already sent.
-		_, _ = fmt.Fprintln(w, "ok")
+		_, _ = fmt.Fprintln(w, "ok") //nolint:errcheck // per the comment above
 	}))
 	http.Handle("/", http.HandlerFunc(srv.handleDashboard))
 }
@@ -161,6 +165,8 @@ func run() error {
 	}
 
 	// The report is the reason the process existed; print it on the way out.
+	//nolint:errcheck // the report is the last thing this process does; a
+	// stderr that will not take it has nowhere to be told
 	_ = report.Text(os.Stderr, srv.agg.Summary())
 	return err
 }
@@ -306,6 +312,7 @@ func (s *server) periodic(ctx context.Context, every time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			//nolint:errcheck // a periodic print to stderr; the next tick tries again
 			_ = report.Text(os.Stderr, s.agg.Summary())
 		}
 	}
@@ -323,11 +330,13 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
+		//nolint:errcheck // the 200 is already on the wire; a client that left
+		// mid-body cannot be told about it
 		_ = enc.Encode(summary)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_ = report.Text(w, summary)
+	_ = report.Text(w, summary) //nolint:errcheck // as above: the status is sent
 }
 
 // statsResponse is the body of /stats. It has a name because it is a wire
@@ -348,6 +357,7 @@ func (s *server) handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
+	//nolint:errcheck // as above: the status is sent
 	_ = enc.Encode(statsResponse{Collector: s.buf.Stats(), Kill: s.kill.Engaged()})
 }
 

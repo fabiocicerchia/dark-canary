@@ -36,6 +36,9 @@ type Collector interface {
 	Pairs() <-chan Pair
 }
 
+// The two sides of a comparison. A capture that names neither is
+// discarded rather than guessed at: pairing the wrong halves would
+// invent divergence that never happened.
 const (
 	PathPrimary = "primary"
 	PathShadow  = "shadow"
@@ -54,6 +57,8 @@ type Stats struct {
 	Backlog   int64 `json:"backlog"`   // pairs the diff engine has not consumed yet
 }
 
+// Options configures a Buffer. Every field has a working default, so the
+// zero value is a usable collector.
 type Options struct {
 	// Timeout is how long a lone capture waits for its partner. The shadow can
 	// be slower than the primary — that is often the finding — so this wants to
@@ -94,6 +99,8 @@ type Buffer struct {
 
 var _ Collector = (*Buffer)(nil)
 
+// New returns a Buffer, filling in the defaults for whatever Options left
+// unset.
 func New(opts Options) *Buffer {
 	if opts.Timeout <= 0 {
 		opts.Timeout = defaultTimeout
@@ -105,7 +112,7 @@ func New(opts Options) *Buffer {
 		opts.Buffer = defaultBuffer
 	}
 	if opts.Now == nil {
-		opts.Now = time.Now
+		opts.Now = time.Now //nolint:forbidigo // the default for the injectable clock above
 	}
 	return &Buffer{
 		pending: make(map[string]*pending),
@@ -114,8 +121,14 @@ func New(opts Options) *Buffer {
 	}
 }
 
+// Pairs emits correlated pairs. The channel is buffered: a diff engine
+// that falls behind shows up as Stats.Backlog, and then as Dropped.
 func (b *Buffer) Pairs() <-chan Pair { return b.pairs }
 
+// Ingest files one capture, pairing it with its partner if that has
+// already arrived. Every outcome -- paired, pending, dropped, discarded --
+// is counted, because a capture that vanishes silently is the one failure
+// mode an operator cannot debug.
 func (b *Buffer) Ingest(c Capture) {
 	now := b.opts.Now()
 
@@ -240,6 +253,9 @@ func (b *Buffer) compactOrder() {
 	b.order = kept
 }
 
+// Stats is a snapshot of the counters, plus the two sizes that are only
+// meaningful live: what is still waiting for a partner, and what the diff
+// engine has not consumed.
 func (b *Buffer) Stats() Stats {
 	b.mu.Lock()
 	defer b.mu.Unlock()

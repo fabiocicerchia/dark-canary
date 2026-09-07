@@ -25,7 +25,11 @@ func TestExitCodeClassifiesEveryFailure(t *testing.T) {
 		{"upstream typo", usagef("%w", errors.New(`-primary "ftp://x": need an http:// or https:// URL`)), exitUsage},
 		{"ruleset missing", rulesetError{fmt.Errorf("open /nope: %w", fs.ErrNotExist)}, exitNoInput},
 		{"ruleset unusable", rulesetError{errors.New("rule 0 (/body/x): round: needs 0..15 decimal places")}, exitDataErr},
-		{"listener refused", fmt.Errorf("proxy: %w", &net.OpError{Op: "listen", Err: errors.New("address already in use")}), exitOSErr},
+		{
+			"listener refused",
+			fmt.Errorf("proxy: %w", &net.OpError{Op: "listen", Err: errors.New("address already in use")}),
+			exitOSErr,
+		},
 		{"unclassified", errors.New("something nobody planned for"), exitSoftware},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

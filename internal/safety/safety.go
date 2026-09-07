@@ -92,11 +92,14 @@ type FileKillSwitch struct {
 
 const defaultKillTTL = time.Second
 
+// Engaged reports whether the kill file exists, at most once per TTL. The
+// check is on the request path, so it caches: a shadow deployment must not
+// stat a file once per request.
 func (k *FileKillSwitch) Engaged() bool {
 	if k.Path == "" {
 		return false
 	}
-	now := time.Now
+	now := time.Now //nolint:forbidigo // the default for k.Now, which a test sets
 	if k.Now != nil {
 		now = k.Now
 	}
@@ -127,8 +130,14 @@ type Scrubber struct {
 	fields   []string
 }
 
+// Redacted is what a scrubbed value is replaced with. It is a constant
+// because a report that shows it should be unmistakable, not plausible.
 const Redacted = "[redacted]"
 
+// NewScrubber compiles one matcher per configured field. A field that
+// cannot be compiled is not silently skipped -- the patterns are built
+// from quoted field names, so there is nothing a caller can write that
+// fails to compile.
 func NewScrubber(fields []string) *Scrubber {
 	s := &Scrubber{fields: fields}
 	for _, f := range fields {
@@ -144,6 +153,9 @@ func NewScrubber(fields []string) *Scrubber {
 	return s
 }
 
+// Body redacts every configured field in a JSON body, wherever it appears.
+// A nil Scrubber scrubs nothing, so a caller with no configuration does
+// not have to branch.
 func (s *Scrubber) Body(body []byte) []byte {
 	if s == nil || len(s.patterns) == 0 || len(body) == 0 {
 		return body
@@ -165,6 +177,8 @@ var alwaysScrubbed = map[string]bool{
 	"x-api-key":           true,
 }
 
+// Header redacts a header's values when it is configured for scrubbing, or
+// when it is one of the credentials nobody should have to configure.
 func (s *Scrubber) Header(name string, values []string) []string {
 	lower := strings.ToLower(name)
 	if alwaysScrubbed[lower] {

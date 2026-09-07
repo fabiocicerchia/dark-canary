@@ -32,16 +32,18 @@ func post(t *testing.T, s *server, capture map[string]any) *httptest.ResponseRec
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/captures", strings.NewReader(string(body)))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/captures", strings.NewReader(string(body)))
 	rec := httptest.NewRecorder()
 	s.handleCapture(rec, req)
 	return rec
 }
 
-func capture(path, id, body string, status int) map[string]any {
+// Every capture in these tests is a 200; the status is fixed here rather
+// than repeated at each call.
+func capture(path, id, body string) map[string]any {
 	return map[string]any{
 		"path": path, "correl_id": id, "method": "GET", "uri": "/orders",
-		"status": status, "res_body": []byte(body),
+		"status": 200, "res_body": []byte(body),
 		"res_headers": map[string][]string{"Content-Type": {"application/json"}},
 	}
 }
@@ -51,10 +53,10 @@ func capture(path, id, body string, status int) map[string]any {
 func TestCapturesInReportOut(t *testing.T) {
 	s := testServer(t, nil)
 
-	if rec := post(t, s, capture(collector.PathPrimary, "c1", `{"total":10,"ok":true}`, 200)); rec.Code != http.StatusAccepted {
+	if rec := post(t, s, capture(collector.PathPrimary, "c1", `{"total":10,"ok":true}`)); rec.Code != http.StatusAccepted {
 		t.Fatalf("primary capture rejected: %d %s", rec.Code, rec.Body)
 	}
-	if rec := post(t, s, capture(collector.PathShadow, "c1", `{"total":11,"ok":true}`, 200)); rec.Code != http.StatusAccepted {
+	if rec := post(t, s, capture(collector.PathShadow, "c1", `{"total":11,"ok":true}`)); rec.Code != http.StatusAccepted {
 		t.Fatalf("shadow capture rejected: %d %s", rec.Code, rec.Body)
 	}
 
@@ -87,13 +89,13 @@ func TestReportRendersAsTextAndJSON(t *testing.T) {
 	}))
 
 	rec := httptest.NewRecorder()
-	s.handleReport(rec, httptest.NewRequest(http.MethodGet, "/report", nil))
+	s.handleReport(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/report", nil))
 	if !strings.Contains(rec.Body.String(), "/status") {
 		t.Errorf("text report missing the divergence:\n%s", rec.Body)
 	}
 
 	rec = httptest.NewRecorder()
-	s.handleReport(rec, httptest.NewRequest(http.MethodGet, "/report?format=json", nil))
+	s.handleReport(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/report?format=json", nil))
 	var summary report.Summary
 	if err := json.Unmarshal(rec.Body.Bytes(), &summary); err != nil {
 		t.Fatalf("JSON report is not valid JSON: %v", err)
@@ -107,7 +109,7 @@ func TestReportRendersAsTextAndJSON(t *testing.T) {
 // collector refuses the capture even though the mirroring already happened.
 func TestNonIdempotentCapturesAreRefusedUnderReadsOnly(t *testing.T) {
 	s := testServer(t, nil)
-	c := capture(collector.PathPrimary, "c1", `{}`, 200)
+	c := capture(collector.PathPrimary, "c1", `{}`)
 	c["method"] = "POST"
 
 	if rec := post(t, s, c); rec.Code != http.StatusForbidden {
@@ -120,7 +122,7 @@ func TestNonIdempotentCapturesAreRefusedUnderReadsOnly(t *testing.T) {
 
 func TestWriteMirroringCanBeEnabledDeliberately(t *testing.T) {
 	s := testServer(t, func(c *safety.Config) { c.MirrorReadsOnly = false })
-	c := capture(collector.PathPrimary, "c1", `{}`, 200)
+	c := capture(collector.PathPrimary, "c1", `{}`)
 	c["method"] = "POST"
 
 	if rec := post(t, s, c); rec.Code != http.StatusAccepted {
@@ -135,7 +137,7 @@ func TestKillSwitchStopsIngestion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if rec := post(t, s, capture(collector.PathPrimary, "c1", `{}`, 200)); rec.Code != http.StatusServiceUnavailable {
+	if rec := post(t, s, capture(collector.PathPrimary, "c1", `{}`)); rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("code = %d, want 503 while the kill switch is engaged", rec.Code)
 	}
 	if s.buf.Stats().Received != 0 {
@@ -150,10 +152,10 @@ func TestBodiesAreScrubbedAndCappedOnArrival(t *testing.T) {
 	})
 
 	long := `{"email":"a@b.c","pad":"` + strings.Repeat("x", 200) + `"}`
-	if rec := post(t, s, capture(collector.PathPrimary, "c1", long, 200)); rec.Code != http.StatusAccepted {
+	if rec := post(t, s, capture(collector.PathPrimary, "c1", long)); rec.Code != http.StatusAccepted {
 		t.Fatalf("code = %d", rec.Code)
 	}
-	if rec := post(t, s, capture(collector.PathShadow, "c1", long, 200)); rec.Code != http.StatusAccepted {
+	if rec := post(t, s, capture(collector.PathShadow, "c1", long)); rec.Code != http.StatusAccepted {
 		t.Fatalf("code = %d", rec.Code)
 	}
 
@@ -170,13 +172,15 @@ func TestMalformedRequestsAreRejectedCleanly(t *testing.T) {
 	s := testServer(t, nil)
 
 	rec := httptest.NewRecorder()
-	s.handleCapture(rec, httptest.NewRequest(http.MethodGet, "/captures", nil))
+	s.handleCapture(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/captures", nil))
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("GET /captures = %d, want 405", rec.Code)
 	}
 
 	rec = httptest.NewRecorder()
-	s.handleCapture(rec, httptest.NewRequest(http.MethodPost, "/captures", strings.NewReader("{not json")))
+	bad := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/captures",
+		strings.NewReader("{not json"))
+	s.handleCapture(rec, bad)
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("malformed body = %d, want 400", rec.Code)
 	}
@@ -186,12 +190,12 @@ func TestMalformedRequestsAreRejectedCleanly(t *testing.T) {
 // deployment, and /stats is the answer.
 func TestStatsAccountForEveryCapture(t *testing.T) {
 	s := testServer(t, nil)
-	post(t, s, capture(collector.PathPrimary, "c1", `{}`, 200))
-	post(t, s, capture(collector.PathPrimary, "orphan", `{}`, 200))
-	post(t, s, capture(collector.PathShadow, "c1", `{}`, 200))
+	post(t, s, capture(collector.PathPrimary, "c1", `{}`))
+	post(t, s, capture(collector.PathPrimary, "orphan", `{}`))
+	post(t, s, capture(collector.PathShadow, "c1", `{}`))
 
 	rec := httptest.NewRecorder()
-	s.handleStats(rec, httptest.NewRequest(http.MethodGet, "/stats", nil))
+	s.handleStats(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/stats", nil))
 
 	var got struct {
 		Collector collector.Stats `json:"collector"`
@@ -244,13 +248,13 @@ func TestTokenGuardsEveryEndpoint(t *testing.T) {
 		}
 
 		rec := httptest.NewRecorder()
-		handler(rec, httptest.NewRequest(method, path, strings.NewReader("{}")))
+		handler(rec, httptest.NewRequestWithContext(t.Context(), method, path, strings.NewReader("{}")))
 		if rec.Code != http.StatusUnauthorized {
 			t.Errorf("%s without a token = %d, want 401", path, rec.Code)
 		}
 
 		rec = httptest.NewRecorder()
-		req := httptest.NewRequest(method, path, strings.NewReader("{}"))
+		req := httptest.NewRequestWithContext(t.Context(), method, path, strings.NewReader("{}"))
 		req.Header.Set("X-Dark-Canary-Token", "wrong")
 		handler(rec, req)
 		if rec.Code != http.StatusUnauthorized {
@@ -258,7 +262,7 @@ func TestTokenGuardsEveryEndpoint(t *testing.T) {
 		}
 
 		rec = httptest.NewRecorder()
-		req = httptest.NewRequest(method, path, strings.NewReader("{}"))
+		req = httptest.NewRequestWithContext(t.Context(), method, path, strings.NewReader("{}"))
 		req.Header.Set("X-Dark-Canary-Token", "s3cret")
 		handler(rec, req)
 		if rec.Code == http.StatusUnauthorized {
@@ -270,7 +274,7 @@ func TestTokenGuardsEveryEndpoint(t *testing.T) {
 func TestNoTokenIsFineOnLoopback(t *testing.T) {
 	s := testServer(t, nil) // token empty, as when bound to 127.0.0.1
 	rec := httptest.NewRecorder()
-	s.handleStats(rec, httptest.NewRequest(http.MethodGet, "/stats", nil))
+	s.handleStats(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/stats", nil))
 	if rec.Code != http.StatusOK {
 		t.Errorf("code = %d, want 200 — a loopback bind needs no shared secret", rec.Code)
 	}

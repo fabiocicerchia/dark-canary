@@ -173,8 +173,11 @@ func (p *proxy) mirrorToShadow(r *http.Request, body []byte, correl string) {
 	}
 	defer resp.Body.Close() //nolint:errcheck // response is discarded by design
 
-	resBody, _ := io.ReadAll(io.LimitReader(resp.Body, int64(p.srv.cfg.MaxBodyBytes)))
-	_, _ = io.Copy(io.Discard, resp.Body) // drain so the connection is reusable
+	// A shadow response the proxy could not read in full is still worth
+	// comparing as far as it got: the pair is the finding, not the read.
+	resBody, _ := io.ReadAll(io.LimitReader(resp.Body, int64(p.srv.cfg.MaxBodyBytes))) //nolint:errcheck // see above
+	// Drained only so the connection can be reused.
+	_, _ = io.Copy(io.Discard, resp.Body) //nolint:errcheck
 
 	p.srv.ingest(collector.Capture{
 		Path:       "shadow",

@@ -23,6 +23,8 @@ import (
 // change might be a rounding difference nobody has written a rule for yet.
 type Severity int
 
+// The severities, lowest first. They start at 1 so the zero value is not a
+// valid severity: an unclassified difference should look wrong, not low.
 const (
 	SeverityLow Severity = iota + 1
 	SeverityMedium
@@ -63,6 +65,9 @@ type Group struct {
 	LastAt   time.Time `json:"last_at"`
 }
 
+// Example is one concrete occurrence of a group, kept so a report can show
+// the request that produced it. Bodies are already scrubbed and truncated
+// by the time they reach here.
 type Example struct {
 	CorrelID string `json:"correl_id"`
 	Method   string `json:"method"`
@@ -103,13 +108,17 @@ type Aggregator struct {
 	now        func() time.Time
 }
 
+// New returns an Aggregator that stamps its window from now, which a test
+// supplies and everything else leaves nil.
 func New(now func() time.Time) *Aggregator {
 	if now == nil {
-		now = time.Now
+		now = time.Now //nolint:forbidigo // the default for the clock this constructor takes
 	}
 	return &Aggregator{groups: map[string]*Group{}, since: now(), now: now}
 }
 
+// Add folds one comparison into the report, grouping differences that are
+// the same finding seen again rather than listing every occurrence.
 func (a *Aggregator) Add(r diff.Result) {
 	t := a.now()
 
@@ -210,6 +219,11 @@ func (e *errWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// Text renders a summary for a terminal: the headline numbers, then the
+// groups worth reading, worst first.
+// first error and is what this function returns.
+//
+//nolint:errcheck // every write goes through errWriter, which keeps the
 func Text(w io.Writer, s Summary) error {
 	ew := &errWriter{w: w}
 	_, _ = fmt.Fprintf(ew, "%d pairs compared over %s\n", s.Pairs, s.Now.Sub(s.Since).Round(time.Second))

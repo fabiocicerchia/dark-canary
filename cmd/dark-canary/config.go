@@ -38,23 +38,29 @@ func parseFlags() *options {
 	// traffic, and /report serves them back — binding every interface with
 	// no auth would make this the softest target on the network.
 	flag.StringVar(&o.listen, "listen", "127.0.0.1:8099", "address to accept captures on")
-	flag.StringVar(&o.token, "token", "", "shared secret required in "+tokenHeader+"; mandatory when -listen is not loopback")
+	flag.StringVar(&o.token, "token", "",
+		"shared secret required in "+tokenHeader+"; mandatory when -listen is not loopback")
 	flag.StringVar(&o.rulesPath, "rules", "", "noise ruleset (YAML); merged on top of the built-in defaults")
 	flag.DurationVar(&o.timeout, "correlate-timeout", 30*time.Second, "how long a lone capture waits for its partner")
 	flag.IntVar(&o.maxPending, "max-pending", 10_000, "bound on unpaired captures held in memory")
 	flag.StringVar(&o.killFile, "kill-file", safety.Default().KillFile, "path whose existence stops all processing")
 	flag.IntVar(&o.maxBody, "max-body", safety.Default().MaxBodyBytes, "largest capture body accepted, in bytes")
-	flag.BoolVar(&o.writes, "allow-write-mirroring", false, "accept captures of non-idempotent requests (REAL WRITES on the shadow)")
+	flag.BoolVar(&o.writes, "allow-write-mirroring", false,
+		"accept captures of non-idempotent requests (REAL WRITES on the shadow)")
 	flag.StringVar(&o.scrub, "scrub", "", "comma-separated body fields to redact on arrival")
 	flag.DurationVar(&o.interval, "report-every", 0, "print the report to stderr on this interval (0 = only on request)")
 
 	// Proxy mode: dark-canary does the routing itself, no nginx, no Lua.
-	flag.StringVar(&o.primary, "primary", "", "upstream that answers the client, e.g. http://127.0.0.1:9001 (enables proxy mode)")
+	flag.StringVar(&o.primary, "primary", "",
+		"upstream that answers the client, e.g. http://127.0.0.1:9001 (enables proxy mode)")
 	flag.StringVar(&o.shadow, "shadow", "", "upstream mirrored to and discarded, e.g. http://127.0.0.1:9002")
 	flag.StringVar(&o.proxyListen, "proxy-listen", "127.0.0.1:8080", "address to serve proxied traffic on")
-	flag.Float64Var(&o.sample, "sample", safety.Default().SampleRate, "fraction of eligible requests mirrored to the shadow")
-	flag.DurationVar(&o.shadowTO, "shadow-timeout", 10*time.Second, "how long a mirrored request may take before it is abandoned")
-	flag.IntVar(&o.inflight, "max-inflight", 64, "bound on mirrored requests in flight; over this, requests are served but not mirrored")
+	flag.Float64Var(&o.sample, "sample", safety.Default().SampleRate,
+		"fraction of eligible requests mirrored to the shadow")
+	flag.DurationVar(&o.shadowTO, "shadow-timeout", 10*time.Second,
+		"how long a mirrored request may take before it is abandoned")
+	flag.IntVar(&o.inflight, "max-inflight", 64,
+		"bound on mirrored requests in flight; over this, requests are served but not mirrored")
 	flag.Parse()
 	return &o
 }
