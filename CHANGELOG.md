@@ -5,6 +5,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/fabiocicerchia/dark-canary/compare/v1.1.1...v1.2.0) (2026-09-09)
+
+
+### Features
+
+* **packaging:** man page, OS packages and a staged install ([#49](https://github.com/fabiocicerchia/dark-canary/issues/49)) ([49d4606](https://github.com/fabiocicerchia/dark-canary/commit/49d460620ef4b43f28d41bb27b4534322288c8c8))
+
 ## [1.1.1](https://github.com/fabiocicerchia/dark-canary/compare/v1.1.0...v1.1.1) (2026-09-04)
 
 ### Bug Fixes
