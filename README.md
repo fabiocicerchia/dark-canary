@@ -71,6 +71,22 @@ Four differences — the `Date` header, a timestamp, a float that agrees to the
 cent, and a reordered array — suppressed by rules. One real behaviour change
 surfaced. That contrast is the entire product.
 
+## Verify the download
+
+Every release is signed with [cosign][cosign], keyless: the identity is the
+workflow that published it, not a key anybody holds.
+
+```sh
+cosign verify-blob \
+  --bundle checksums.txt.bundle \
+  --certificate-identity-regexp 'https://github.com/fabiocicerchia/dark-canary' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  checksums.txt
+sha256sum --ignore-missing -c checksums.txt
+```
+
+[cosign]: https://docs.sigstore.dev/
+
 ## Documentation
 
 Full docs live in [`docs/`](docs/). Runnable examples live in [`examples/`](examples/).
