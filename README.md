@@ -19,6 +19,21 @@ unmaintained, and nothing owns the edge-level version.
 
 ## Install
 
+macOS, via Homebrew:
+
+```sh
+brew install fabiocicerchia/tap/dark-canary
+```
+
+Linux — a `.deb`, `.rpm`, `.apk` or Arch package from the
+[latest release](https://github.com/fabiocicerchia/dark-canary/releases/latest):
+
+```sh
+sudo dpkg -i dark-canary_*_linux_amd64.deb     # or rpm -i / apk add --allow-untrusted
+```
+
+Or with Go:
+
 ```sh
 go install github.com/fabiocicerchia/dark-canary/cmd/dark-canary@latest
 ```
