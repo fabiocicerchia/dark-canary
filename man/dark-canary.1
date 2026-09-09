@@ -1,0 +1,105 @@
+.TH DARK-CANARY 1 "2026-09" "dark-canary" "User Commands"
+.SH NAME
+dark-canary \- mirror traffic to a shadow deployment and diff the responses
+.SH SYNOPSIS
+.B dark-canary
+.RI [ flags ]
+.SH DESCRIPTION
+.B dark-canary
+sends production traffic to two deployments, compares the responses and reports
+whether the shadow behaves identically to the primary. One path returns to the
+user; the other is a dead end.
+.PP
+It runs in either of two shapes. As a
+.B proxy
+.RB ( \-primary
+and
+.BR \-shadow )
+it fronts both deployments itself. As a
+.B capture sink
+.RB ( \-listen )
+it receives pairs of captures posted by something else \(em an nginx
+.B mirror
+directive, say \(em and correlates them.
+.PP
+The diff engine is the product: declarative noise suppression for timestamps,
+identifiers, ordering and float precision, so that a report contains real
+divergences rather than every field that was never going to match.
+.SH OPTIONS
+.SS Capture and correlation
+.TP
+.BI \-listen " ADDR"
+Address to accept captures on (default 127.0.0.1:8099).
+.TP
+.BI \-token " TOKEN"
+Shared secret required on posted captures.
+.TP
+.BI \-rules " FILE"
+Noise ruleset (YAML), merged on top of the built-in defaults.
+.TP
+.BI \-correlate\-timeout " DURATION"
+How long a lone capture waits for its partner (default 30s).
+.TP
+.BI \-max\-pending " N"
+Bound on unpaired captures held in memory (default 10000).
+.TP
+.BI \-scrub " FIELDS"
+Comma-separated body fields to redact on arrival.
+.TP
+.BI \-report\-every " DURATION"
+Print the report to standard error on this interval (0 = only on request).
+.SS Proxying
+.TP
+.BI \-primary " URL"
+Upstream whose response is returned to the caller.
+.TP
+.BI \-shadow " URL"
+Upstream that is mirrored to and discarded, e.g.
+.IR http://127.0.0.1:9002 .
+.TP
+.BI \-proxy\-listen " ADDR"
+Address to serve proxied traffic on (default 127.0.0.1:8080).
+.TP
+.BI \-sample " RATE"
+Fraction of traffic mirrored to the shadow.
+.TP
+.BI \-shadow\-timeout " DURATION"
+How long the shadow gets before its response is abandoned (default 10s).
+.TP
+.BI \-max\-inflight " N"
+Bound on concurrent shadow requests (default 64).
+.SS Safety
+.TP
+.BI \-kill\-file " PATH"
+Path whose existence stops all processing.
+.TP
+.BI \-max\-body " BYTES"
+Largest capture body accepted.
+.TP
+.B \-allow\-write\-mirroring
+Mirror non-idempotent methods too. Off by default: mirroring a write means the
+shadow performs it as well.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 64
+A flag, or a combination of flags, the tool refuses.
+.SH EXAMPLES
+.PP
+Front two deployments and mirror a tenth of the traffic:
+.PP
+.RS
+.B dark-canary \-primary http://127.0.0.1:9001 \-shadow http://127.0.0.1:9002 \-sample 0.1
+.RE
+.PP
+Take captures from nginx instead, suppressing known noise:
+.PP
+.RS
+.B dark-canary \-listen 127.0.0.1:8099 \-rules noise.yaml
+.RE
+.SH SEE ALSO
+Project documentation:
+.UR https://github.com/fabiocicerchia/dark-canary
+.UE

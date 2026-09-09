@@ -3,3 +3,6 @@ coverage.out
 .DS_Store
 reports/
 site/
+
+# goreleaser output
+dist/
