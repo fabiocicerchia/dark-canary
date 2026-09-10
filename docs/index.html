@@ -48,7 +48,12 @@ footer{margin-top:2.2rem;color:#6b6252;font-size:.82rem}
 <div class="card">
   <h1>🐤 dark-canary</h1>
   <p class="tagline">Mirror production traffic to a shadow deployment and diff the responses.</p>
-  <p class="desc">One binary sits in front of both, answers the client from the primary, and fires a copy at the shadow — a dead end whose latency and failures can never reach the user. The product is the diff engine: structural comparison plus declarative noise suppression for timestamps, IDs, ordering and float precision, so the only thing left in the report is a real behaviour change.</p>
+  <p class="desc">
+    One binary sits in front of both, answers the client from the primary, and fires a copy at the shadow — a dead end
+    whose latency and failures can never reach the user. The product is the diff engine: structural comparison plus
+    declarative noise suppression for timestamps, IDs, ordering and float precision, so the only thing left in the
+    report is a real behaviour change.
+  </p>
   <div class="install-label">Run</div>
   <pre><code>make build
 ./bin/dark-canary -rules noise.example.yaml \
