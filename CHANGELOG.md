@@ -5,6 +5,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1](https://github.com/fabiocicerchia/dark-canary/compare/v2.0.0...v2.0.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* **release:** let the release PR carry a token that isn't GITHUB_TOKEN ([#58](https://github.com/fabiocicerchia/dark-canary/issues/58)) ([b8c12f9](https://github.com/fabiocicerchia/dark-canary/commit/b8c12f9bb43d471d1e6ac044518350501c18a09e))
+
 ## [2.0.0](https://github.com/fabiocicerchia/dark-canary/compare/v1.2.0...v2.0.0) (2026-09-09)
 
 
