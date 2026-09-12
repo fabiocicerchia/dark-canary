@@ -17,6 +17,25 @@ declarative noise suppression** for timestamps, IDs, ordering and float
 precision. Diffy and Scientist did this for services and refactors; both are long
 unmaintained, and nothing owns the edge-level version.
 
+## Features
+
+- Mirrors production traffic to a shadow deployment and **structurally diffs
+  the responses** — one path returns to the user, the other is a dead end.
+- **Declarative noise suppression** is the product: timestamps, IDs, ordering
+  and float precision are ruled out by config, so what is left is real
+  behaviour change.
+- Reports by severity with rates and paths, and counts what the rules
+  suppressed — the contrast between "4 differences suppressed" and "1
+  divergent" is the whole point.
+- One binary in front of both upstreams: no nginx, no Lua, no config file to
+  get started.
+- `-sample` controls what fraction of traffic is mirrored, so it can be turned
+  on against real load gradually.
+- Separate report endpoint, so the comparison can be read while traffic keeps
+  flowing.
+- Ships as Homebrew, `.deb`, `.rpm`, `.apk` and Arch packages, via `go
+  install`, or built from a checkout.
+
 ## Install
 
 macOS, via Homebrew:
