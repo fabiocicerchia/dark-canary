@@ -72,7 +72,7 @@ jobs:
       # Whatever input broke it is the only useful artifact of a failed run.
       - name: upload crashers
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: fuzz-corpus
           path: internal/*/testdata/fuzz/
@@ -105,7 +105,7 @@ jobs:
 
       # Catch common typos in code and docs.
       - name: typos
-        uses: crate-ci/typos@512fc24f32f44ab01972217aaaf3dc86ec234d53  # branch master
+        uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b  # branch master
 
       # pre-commit runs the language-specific hooks defined in
       # .pre-commit-config.yaml. It no-ops gracefully if none apply.
