@@ -5,6 +5,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3](https://github.com/fabiocicerchia/dark-canary/compare/v2.0.2...v2.0.3) (2026-10-21)
+
+
+### Bug Fixes
+
+* **deps:** bump Go toolchain to go1.26.10 ([#82](https://github.com/fabiocicerchia/dark-canary/issues/82)) ([766244d](https://github.com/fabiocicerchia/dark-canary/commit/766244dd2d9f6e10bfa2c89d2313e15798487e65))
+
 ## [2.0.2](https://github.com/fabiocicerchia/dark-canary/compare/v2.0.1...v2.0.2) (2026-09-20)
 
 
