@@ -8,6 +8,6 @@ go 1.24
 // own http.Client.Do and ReverseProxy.RoundTrip reach them, so they were not
 // theoretical here (GO-2026-5026 among them, in net/http via x/net/idna).
 // main has since moved past that, so take the higher toolchain.
-toolchain go1.26.8
+toolchain go1.26.10
 
 require gopkg.in/yaml.v3 v3.0.1
