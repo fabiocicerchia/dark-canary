@@ -291,6 +291,30 @@ test("the request body is captured, scrubbed and base64-encoded", function()
   eq(wire.req_body, base64('{"password":"[redacted]","q":1}'), "req_body")
 end)
 
+-- The URI path redacts scrub_args; a login form carries the same keys in its
+-- body, and scrub_fields defaults to none.
+test("scrub_args keys are redacted in a form-encoded request body", function()
+  ngx_stub.body_data = "user=ann&Password=hunter2&next=%2F&token="
+  local wire = dc.to_wire({}, { path = "primary", scrub_args = { "password", "token" } })
+  eq(wire.req_body, base64("user=ann&Password=[redacted]&next=%2F&token=[redacted]"), "req_body")
+end)
+
+test("scrub_args keys reach the JSON scrubber too", function()
+  ngx_stub.body_data = '{"token":"abc"}'
+  local seen
+  kit.scrub_body = function(body, fields) seen = fields; return body end
+  dc.to_wire({}, { path = "primary", scrub_fields = { "card" }, scrub_args = { "token", "CARD" } })
+  eq(#seen, 2, "the two lists are merged without repeats")
+  eq(seen[2], "token", "scrub_args key")
+end)
+
+test("the kit's default scrub_args apply when none are configured", function()
+  kit.DEFAULTS.scrub_args = { "password" }
+  ngx_stub.body_data = "password=hunter2"
+  local wire = dc.to_wire({}, { path = "primary" })
+  eq(wire.req_body, base64("password=[redacted]"), "req_body")
+end)
+
 test("a request body over max_body is cut at it", function()
   ngx_stub.body_data = string.rep("x", 10)
   local wire = dc.to_wire({}, { path = "primary", max_body = 4 })

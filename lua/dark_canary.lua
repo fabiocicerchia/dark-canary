@@ -97,6 +97,30 @@ local function as_lists(headers)
   return out
 end
 
+-- The kit redacts scrub_args only in the query string, and its body scrubber
+-- only the JSON keys in scrub_fields, which default to none. A request body is
+-- where a login form puts password=..., so both lists apply to it, in both
+-- encodings; otherwise the secret the URI path redacts ships here in clear.
+local function secret_keys(o)
+  local keys, set = {}, {}
+  local lists = { o.scrub_fields or kit.DEFAULTS.scrub_fields, o.scrub_args or kit.DEFAULTS.scrub_args }
+  for _, list in ipairs(lists) do
+    for _, key in ipairs(list or {}) do
+      if not set[key:lower()] then
+        set[key:lower()] = true
+        keys[#keys + 1] = key
+      end
+    end
+  end
+  return keys, set
+end
+
+local function scrub_form(body, set)
+  return (("&" .. body):gsub("&([^=&]+)=[^&]*", function(key)
+    if set[key:lower()] then return "&" .. key .. "=[redacted]" end
+  end)):sub(2)
+end
+
 -- The request body, as far as the edge can see it. A body nginx spooled to a
 -- temp file is not read back: that is blocking I/O in the log phase.
 --
@@ -105,7 +129,8 @@ end
 local function request_body(o)
   local body = ngx.req.get_body_data()
   if not body or max_body(o) <= 0 then return nil end
-  body = kit.scrub_body(body, o.scrub_fields or kit.DEFAULTS.scrub_fields)
+  local keys, set = secret_keys(o)
+  body = scrub_form(kit.scrub_body(body, keys), set)
   return body:sub(1, max_body(o))
 end
 

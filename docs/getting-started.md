@@ -206,7 +206,9 @@ module, because that hook is useful on its own and building it there is what mad
 this project cheaper. What is here is labelling which side a capture came from,
 mapping the kit's capture onto the collector's schema — the response body to
 `res_body`, the request body to `req_body`, both base64, headers as lists — and
-shipping it. See that project's `examples/waf.conf.example`.
+shipping it. The request body is redacted with both the kit's `scrub_fields`
+and its `scrub_args`, as JSON keys and as form fields, so a login form's
+`password=` is redacted in the body as it is in the query string. See that project's `examples/waf.conf.example`.
 
 A collector that is not on loopback refuses captures without its token, so pass
 the same value the collector was started with on both servers:
