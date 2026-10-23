@@ -203,5 +203,17 @@ is a separate install.
 `lua/dark_canary.lua` is deliberately thin — the kill switch, reads-only,
 sampling, correlation and scrubbing all live in `nginx-lua-waf-kit`'s `mirror`
 module, because that hook is useful on its own and building it there is what made
-this project cheaper. What is here is labelling which side a capture came from
-and shipping it. See that project's `examples/waf.conf.example`.
+this project cheaper. What is here is labelling which side a capture came from,
+mapping the kit's capture onto the collector's schema — the response body to
+`res_body`, the request body to `req_body`, both base64, headers as lists — and
+shipping it. See that project's `examples/waf.conf.example`.
+
+A collector that is not on loopback refuses captures without its token, so pass
+the same value the collector was started with on both servers:
+
+```nginx
+log_by_lua_block { require("dark_canary").log({ collector = { host = "10.0.0.5", token = "…" } }) }
+```
+
+`lua/testdata/` pins the exact payload the hook ships, and the collector's tests
+decode it, so a change on either side of the seam fails on that side.

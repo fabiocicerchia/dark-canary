@@ -6,8 +6,8 @@
 -- building it there is what made this project cheaper.
 --
 -- What is here is the part that is dark-canary's and nobody else's: labelling
--- which side of the mirror a capture came from, and shipping it to the
--- collector.
+-- which side of the mirror a capture came from, putting it in the shape the
+-- collector decodes, and shipping it there with the collector's token.
 --
 -- The file is `dark_canary.lua`, not `mirror.lua`, so it cannot shadow the kit
 -- module it requires. Install the kit and point lua_package_path at both.
@@ -30,9 +30,14 @@ local _M = { _VERSION = "0.1.0" }
 
 local DEFAULTS = {
   path      = "primary",                    -- or "shadow", on the shadow server
-  collector = { host = "127.0.0.1", port = 8099, path = "/captures", timeout = 1000 },
+  collector = { host = "127.0.0.1", port = 8099, path = "/captures", timeout = 1000,
+                -- The collector's -token. Required unless it listens on loopback,
+                -- where it accepts captures without one.
+                token = nil },
   header    = "X-Dark-Canary-Id",
 }
+
+local TOKEN_HEADER = "X-Dark-Canary-Token"
 
 local function merge(opts)
   opts = opts or {}
@@ -62,6 +67,10 @@ function _M.decide(opts)
       -- only fill the collector with orphans.
       ngx.ctx.dc_mirror = false
       ngx.log(ngx.WARN, "dark-canary: shadow request without a correlation id")
+    else
+      -- The kit reads the body on the primary; nothing does here, and an
+      -- unread body is one get_body_data() cannot return.
+      ngx.req.read_body()
     end
     return ngx.ctx.dc_mirror
   end
@@ -72,12 +81,87 @@ function _M.body_filter(opts)
   return kit.body_filter(merge(opts))
 end
 
+-- The collector decodes headers as lists of values, but ngx returns a string
+-- for a header sent once and a table only for a repeated one. One string is
+-- enough to make the whole capture fail to decode.
+local function as_lists(headers)
+  local out = {}
+  for name, value in pairs(headers or {}) do
+    out[name] = type(value) == "table" and value or { tostring(value) }
+  end
+  return out
+end
+
+-- The request body, as far as the edge can see it. A body nginx spooled to a
+-- temp file is not read back: that is blocking I/O in the log phase.
+local function request_body(o)
+  local body = ngx.req.get_body_data()
+  if not body then return nil end
+  local limit = o.max_body or kit.DEFAULTS.max_body
+  if #body > limit then body = body:sub(1, limit) end
+  return kit.scrub_body(body, o.scrub_fields or kit.DEFAULTS.scrub_fields)
+end
+
+-- The kit's capture table is shared with its other consumers, so it keeps its
+-- own shape and this maps it onto collector.Capture: the response body is
+-- `res_body` there, the request body is not captured at all, and both are
+-- []byte, which encoding/json reads only from base64.
+function _M.to_wire(capture, o)
+  local wire = {}
+  for k, v in pairs(capture) do wire[k] = v end
+  wire.path = o.path -- the one field the kit cannot know
+  wire.body = nil
+  wire.req_headers = as_lists(capture.req_headers)
+  wire.res_headers = as_lists(capture.res_headers)
+  wire.res_body = capture.body and ngx.encode_base64(capture.body) or nil
+  local req = request_body(o)
+  wire.req_body = req and ngx.encode_base64(req) or nil
+  return wire
+end
+
+-- The kit's ship() sends no headers of its own, and the collector refuses a
+-- capture without its token anywhere but loopback. Same transport otherwise:
+-- a cosocket from a timer, so the response is already on its way back.
+function _M.ship(capture, collector)
+  local token = collector.token or ""
+  if token:find("[\r\n]") then
+    -- A line break would end the header and start one the operator never wrote.
+    ngx.log(ngx.ERR, "dark-canary: collector.token contains a line break; not shipping")
+    return
+  end
+  local auth = token ~= "" and (TOKEN_HEADER .. ": " .. token .. "\r\n") or ""
+  local payload = require("cjson.safe").encode(capture)
+  if not payload then return end
+  local queued, err = ngx.timer.at(0, function(premature)
+    if premature then return end
+    local sock = ngx.socket.tcp()
+    sock:settimeout(collector.timeout or 1000)
+    local ok, cerr = sock:connect(collector.host, collector.port)
+    if not ok then
+      ngx.log(ngx.WARN, "dark-canary: collector unreachable: ", cerr)
+      return
+    end
+    sock:send({
+      "POST ", collector.path or "/captures", " HTTP/1.1\r\n",
+      "Host: ", collector.host, "\r\n",
+      "Content-Type: application/json\r\n",
+      "Content-Length: ", #payload, "\r\n",
+      auth,
+      "Connection: close\r\n\r\n",
+      payload,
+    })
+    sock:close()
+  end)
+  if not queued then
+    ngx.log(ngx.WARN, "dark-canary: could not queue capture: ", err)
+  end
+end
+
 function _M.log(opts)
   local o = merge(opts)
   local capture = kit.capture(o)
   if not capture then return end
-  capture.path = o.path -- the one field the kit cannot know
-  kit.ship(capture, o.collector)
+  _M.ship(_M.to_wire(capture, o), o.collector)
 end
 
 _M.DEFAULTS = DEFAULTS

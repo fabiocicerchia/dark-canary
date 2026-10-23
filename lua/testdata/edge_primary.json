@@ -1,0 +1,1 @@
+{"at":1700000000,"correl_id":"edge-1","latency_ms":12,"method":"GET","path":"primary","req_body":"eyJpZCI6N30=","req_headers":{"accept":["application/json"],"x-dark-canary-id":["edge-1"]},"res_body":"eyJ0b3RhbCI6MTAsIm9rIjp0cnVlfQ==","res_headers":{"content-type":["application/json"],"vary":["Accept","Origin"]},"status":200,"truncated":false,"uri":"/orders?id=7&token=[redacted]"}
