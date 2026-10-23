@@ -54,6 +54,10 @@ local function merge(opts)
   return o
 end
 
+local function max_body(o)
+  return o.max_body or kit.DEFAULTS.max_body
+end
+
 -- On the primary this decides and generates the correlation id. On the shadow
 -- the decision was already made upstream — the request only exists because the
 -- primary mirrored it — so capture unconditionally and adopt the id it carries.
@@ -67,9 +71,10 @@ function _M.decide(opts)
       -- only fill the collector with orphans.
       ngx.ctx.dc_mirror = false
       ngx.log(ngx.WARN, "dark-canary: shadow request without a correlation id")
-    else
+    elseif max_body(o) > 0 then
       -- The kit reads the body on the primary; nothing does here, and an
-      -- unread body is one get_body_data() cannot return.
+      -- unread body is one get_body_data() cannot return. max_body = 0 turns
+      -- body capture off on both sides alike.
       ngx.req.read_body()
     end
     return ngx.ctx.dc_mirror
@@ -94,12 +99,14 @@ end
 
 -- The request body, as far as the edge can see it. A body nginx spooled to a
 -- temp file is not read back: that is blocking I/O in the log phase.
+--
+-- Scrubbed before it is cut: the scrubber matches a whole "key":"value" pair,
+-- so a cut through a value would leave the start of that secret unredacted.
 local function request_body(o)
   local body = ngx.req.get_body_data()
-  if not body then return nil end
-  local limit = o.max_body or kit.DEFAULTS.max_body
-  if #body > limit then body = body:sub(1, limit) end
-  return kit.scrub_body(body, o.scrub_fields or kit.DEFAULTS.scrub_fields)
+  if not body or max_body(o) <= 0 then return nil end
+  body = kit.scrub_body(body, o.scrub_fields or kit.DEFAULTS.scrub_fields)
+  return body:sub(1, max_body(o))
 end
 
 -- The kit's capture table is shared with its other consumers, so it keeps its

@@ -295,6 +295,26 @@ test("a request body over max_body is cut at it", function()
   eq(wire.req_body, base64("xxxx"), "req_body")
 end)
 
+-- The scrubber matches a whole "key":"value" pair; a cut through the value
+-- first would ship the start of the secret.
+test("the request body is scrubbed before it is cut", function()
+  ngx_stub.body_data = '{"password":"hunter2"}'
+  kit.scrub_body = function(body)
+    return (body:gsub('("password":)"[^"]*"', '%1"[redacted]"'))
+  end
+  local wire = dc.to_wire({}, { path = "primary", max_body = 16 })
+  eq(wire.req_body, base64('{"password":"[re'), "req_body")
+end)
+
+test("max_body = 0 captures no request body on either side", function()
+  ngx_stub.body_data = '{"id":7}'
+  local wire = dc.to_wire({}, { path = "shadow", max_body = 0 })
+  eq(wire.req_body, nil, "req_body")
+  ngx_stub.var["http_x_dark_canary_id"] = "abc123"
+  dc.decide({ path = "shadow", max_body = 0 })
+  eq(ngx_stub.body_read, false, "read_body called")
+end)
+
 test("no request body is no req_body, not an empty one", function()
   local wire = dc.to_wire({}, { path = "primary" })
   eq(wire.req_body, nil, "req_body")
