@@ -115,6 +115,7 @@ local function secret_keys(o)
   return keys, set
 end
 
+-- The leading "&" lets the first pair match the same pattern as the rest.
 local function scrub_form(body, set)
   return (("&" .. body):gsub("&([^=&]+)=[^&]*", function(key)
     if set[key:lower()] then return "&" .. key .. "=[redacted]" end
@@ -151,6 +152,37 @@ function _M.to_wire(capture, o)
   return wire
 end
 
+-- One POST to the collector, from inside a timer. The status line is read
+-- because a wrong or missing token is a 401 on every capture; unread, the edge
+-- would look healthy while the collector receives nothing.
+local function post(collector, auth, payload)
+  local sock = ngx.socket.tcp()
+  sock:settimeout(collector.timeout or 1000)
+  local ok, cerr = sock:connect(collector.host, collector.port)
+  if not ok then
+    ngx.log(ngx.WARN, "dark-canary: collector unreachable: ", cerr)
+    return
+  end
+  local sent, serr = sock:send({
+    "POST ", collector.path or "/captures", " HTTP/1.1\r\n",
+    "Host: ", collector.host, "\r\n",
+    "Content-Type: application/json\r\n",
+    "Content-Length: ", #payload, "\r\n",
+    auth,
+    "Connection: close\r\n\r\n",
+    payload,
+  })
+  if not sent then
+    ngx.log(ngx.WARN, "dark-canary: could not send capture: ", serr)
+  else
+    local status = sock:receive("*l")
+    if not (status and status:match("^HTTP/%d%.%d 202 ")) then
+      ngx.log(ngx.WARN, "dark-canary: collector refused capture: ", status or "no response")
+    end
+  end
+  sock:close()
+end
+
 -- The kit's ship() sends no headers of its own, and the collector refuses a
 -- capture without its token anywhere but loopback. Same transport otherwise:
 -- a cosocket from a timer, so the response is already on its way back.
@@ -165,32 +197,7 @@ function _M.ship(capture, collector)
   local payload = require("cjson.safe").encode(capture)
   if not payload then return end
   local queued, err = ngx.timer.at(0, function(premature)
-    if premature then return end
-    local sock = ngx.socket.tcp()
-    sock:settimeout(collector.timeout or 1000)
-    local ok, cerr = sock:connect(collector.host, collector.port)
-    if not ok then
-      ngx.log(ngx.WARN, "dark-canary: collector unreachable: ", cerr)
-      return
-    end
-    local sent, serr = sock:send({
-      "POST ", collector.path or "/captures", " HTTP/1.1\r\n",
-      "Host: ", collector.host, "\r\n",
-      "Content-Type: application/json\r\n",
-      "Content-Length: ", #payload, "\r\n",
-      auth,
-      "Connection: close\r\n\r\n",
-      payload,
-    })
-    -- A wrong or missing token is a 401 on every capture; unread, the edge
-    -- would look healthy while the collector receives nothing.
-    local status = sent and sock:receive("*l")
-    if not sent then
-      ngx.log(ngx.WARN, "dark-canary: could not send capture: ", serr)
-    elseif not (status and status:match("^HTTP/%d%.%d 202 ")) then
-      ngx.log(ngx.WARN, "dark-canary: collector refused capture: ", status or "no response")
-    end
-    sock:close()
+    if not premature then post(collector, auth, payload) end
   end)
   if not queued then
     ngx.log(ngx.WARN, "dark-canary: could not queue capture: ", err)
