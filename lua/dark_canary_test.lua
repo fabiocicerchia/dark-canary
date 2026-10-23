@@ -84,6 +84,7 @@ local function reset()
   -- sees the exact bytes the collector would.
   ngx_stub.sent = nil
   ngx_stub.connect_ok = true
+  ngx_stub.reply = "HTTP/1.1 202 Accepted"
   ngx_stub.timer = { at = function(_, fn) fn(false); return true end }
   ngx_stub.socket = {
     tcp = function()
@@ -94,7 +95,8 @@ local function reset()
           if ngx_stub.connect_ok then return true end
           return nil, "connection refused"
         end,
-        send = function(_, parts) ngx_stub.sent = table.concat(parts) end,
+        send = function(_, parts) ngx_stub.sent = table.concat(parts); return #ngx_stub.sent end,
+        receive = function() return ngx_stub.reply end,
         close = function() end,
       }
     end,
@@ -367,6 +369,19 @@ test("an unreachable collector is logged, not raised", function()
   dc.log()
   eq(ngx_stub.sent, nil, "sent")
   eq(ngx_stub.logs[1].level, "warn", "log level")
+end)
+
+test("a capture the collector refuses is logged", function()
+  ngx_stub.reply = "HTTP/1.1 401 Unauthorized"
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  eq(ngx_stub.logs[1].msg, "dark-canary: collector refused capture: HTTP/1.1 401 Unauthorized", "log")
+end)
+
+test("an accepted capture logs nothing", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  eq(#ngx_stub.logs, 0, "logs")
 end)
 
 -- --- the seam ----------------------------------------------------------------

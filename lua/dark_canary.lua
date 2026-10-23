@@ -148,7 +148,7 @@ function _M.ship(capture, collector)
       ngx.log(ngx.WARN, "dark-canary: collector unreachable: ", cerr)
       return
     end
-    sock:send({
+    local sent, serr = sock:send({
       "POST ", collector.path or "/captures", " HTTP/1.1\r\n",
       "Host: ", collector.host, "\r\n",
       "Content-Type: application/json\r\n",
@@ -157,6 +157,14 @@ function _M.ship(capture, collector)
       "Connection: close\r\n\r\n",
       payload,
     })
+    -- A wrong or missing token is a 401 on every capture; unread, the edge
+    -- would look healthy while the collector receives nothing.
+    local status = sent and sock:receive("*l")
+    if not sent then
+      ngx.log(ngx.WARN, "dark-canary: could not send capture: ", serr)
+    elseif not (status and status:match("^HTTP/%d%.%d 202 ")) then
+      ngx.log(ngx.WARN, "dark-canary: collector refused capture: ", status or "no response")
+    end
     sock:close()
   end)
   if not queued then

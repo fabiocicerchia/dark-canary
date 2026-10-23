@@ -215,5 +215,11 @@ the same value the collector was started with on both servers:
 log_by_lua_block { require("dark_canary").log({ collector = { host = "10.0.0.5", token = "…" } }) }
 ```
 
+The hook speaks plain HTTP and the collector serves no TLS, so the token and
+the scrubbed captures cross the wire in clear: keep that hop on a private
+network, or put a TLS-terminating proxy in front of the collector. A capture
+the collector refuses — a wrong token is a 401 on every one — is logged as a
+warning at the edge.
+
 `lua/testdata/` pins the exact payload the hook ships, and the collector's tests
 decode it, so a change on either side of the seam fails on that side.
