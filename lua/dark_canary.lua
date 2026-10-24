@@ -138,9 +138,14 @@ end
 --
 -- Scrubbed before it is cut: the scrubber matches a whole "key":"value" pair,
 -- so a cut through a value would leave the start of that secret unredacted.
+--
+-- A multipart body is not shipped at all. It carries the same form fields as a
+-- urlencoded one, but inside parts that neither scrubber reads, so a login or
+-- upload form would send its password= to the collector in clear.
 local function request_body(o)
   local body = ngx.req.get_body_data()
   if not body or max_body(o) <= 0 then return nil end
+  if (ngx.var.content_type or ""):lower():find("^%s*multipart/") then return nil end
   local keys, set = secret_keys(o)
   body = scrub_form(kit.scrub_body(body, keys), set)
   return body:sub(1, max_body(o))

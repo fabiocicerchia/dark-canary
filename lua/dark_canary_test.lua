@@ -321,6 +321,15 @@ test("scrub_args keys reach the JSON scrubber too", function()
   eq(seen[2], "token", "scrub_args key")
 end)
 
+-- Neither scrubber reads inside a multipart part, so its fields would ship in
+-- clear; the body is left out instead.
+test("a multipart request body is not shipped", function()
+  ngx_stub.body_data = '--b\r\nContent-Disposition: form-data; name="password"\r\n\r\nhunter2\r\n--b--\r\n'
+  ngx_stub.var.content_type = "Multipart/Form-Data; boundary=b"
+  local wire = dc.to_wire({}, { path = "primary", scrub_args = { "password" } })
+  eq(wire.req_body, nil, "req_body")
+end)
+
 test("the kit's default scrub_args apply when none are configured", function()
   kit.DEFAULTS.scrub_args = { "password" }
   ngx_stub.body_data = "password=hunter2"
