@@ -203,5 +203,38 @@ is a separate install.
 `lua/dark_canary.lua` is deliberately thin — the kill switch, reads-only,
 sampling, correlation and scrubbing all live in `nginx-lua-waf-kit`'s `mirror`
 module, because that hook is useful on its own and building it there is what made
-this project cheaper. What is here is labelling which side a capture came from
-and shipping it. See that project's `examples/waf.conf.example`.
+this project cheaper. What is here is labelling which side a capture came from,
+mapping the kit's capture onto the collector's schema — the response body to
+`res_body`, the request body to `req_body`, both base64, headers as lists — and
+shipping it. The request body is redacted with both the kit's `scrub_fields`
+and its `scrub_args`, as JSON keys and as form fields, so a login form's
+`password=` is redacted in the body as it is in the query string. A
+`multipart/*` request body is not shipped at all, since neither scrubber reads
+inside its parts. See that project's `examples/waf.conf.example`.
+
+A collector that is not on loopback refuses captures without its token, so pass
+the same value the collector was started with on both servers:
+
+```nginx
+log_by_lua_block { require("dark_canary").log({ collector = { host = "10.0.0.5", token = "…" } }) }
+```
+
+The collector serves no TLS. Without `tls`, the hook speaks plain HTTP and
+the token and the scrubbed captures cross the wire in clear, which is only
+acceptable on loopback or a network you trust. Anywhere else, put a
+TLS-terminating proxy in front of the collector and turn on `tls`, which
+verifies the proxy's certificate against `lua_ssl_trusted_certificate`:
+
+```nginx
+lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+lua_ssl_verify_depth 3;
+log_by_lua_block { require("dark_canary").log({ collector = {
+  host = "10.0.0.5", port = 8443, tls = true, server_name = "collector.internal", token = "…" } }) }
+```
+
+A failed handshake ships nothing and logs a warning. A capture
+the collector refuses — a wrong token is a 401 on every one — is logged as a
+warning at the edge.
+
+`lua/testdata/` pins the exact payload the hook ships, and the collector's tests
+decode it, so a change on either side of the seam fails on that side.
