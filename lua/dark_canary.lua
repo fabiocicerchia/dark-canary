@@ -33,7 +33,11 @@ local DEFAULTS = {
   collector = { host = "127.0.0.1", port = 8099, path = "/captures", timeout = 1000,
                 -- The collector's -token. Required unless it listens on loopback,
                 -- where it accepts captures without one.
-                token = nil },
+                token = nil,
+                -- TLS to whatever terminates it in front of the collector. The
+                -- certificate is verified against lua_ssl_trusted_certificate,
+                -- for server_name (default: host).
+                tls = false, server_name = nil },
   header    = "X-Dark-Canary-Id",
 }
 
@@ -115,10 +119,17 @@ local function secret_keys(o)
   return keys, set
 end
 
--- The leading "&" lets the first pair match the same pattern as the rest.
+-- A form key as the application will read it: `pass%77ord` and `pass+word`
+-- arrive as `password` and `pass word`, so they are compared decoded.
+local function form_decode(key)
+  return (key:gsub("+", " "):gsub("%%(%x%x)", function(hex) return string.char(tonumber(hex, 16)) end))
+end
+
+-- The leading "&" lets the first pair match the same pattern as the rest. The
+-- key is kept as written; only the value is replaced.
 local function scrub_form(body, set)
   return (("&" .. body):gsub("&([^=&]+)=[^&]*", function(key)
-    if set[key:lower()] then return "&" .. key .. "=[redacted]" end
+    if set[form_decode(key):lower()] then return "&" .. key .. "=[redacted]" end
   end)):sub(2)
 end
 
@@ -162,6 +173,16 @@ local function post(collector, auth, payload)
   if not ok then
     ngx.log(ngx.WARN, "dark-canary: collector unreachable: ", cerr)
     return
+  end
+  if collector.tls then
+    -- Verified, always: an unverified handshake would hand the token to
+    -- whoever answers, which is the exposure TLS is here to close.
+    local _, herr = sock:sslhandshake(nil, collector.server_name or collector.host, true)
+    if herr then
+      ngx.log(ngx.WARN, "dark-canary: collector TLS handshake failed: ", herr)
+      sock:close()
+      return
+    end
   end
   local sent, serr = sock:send({
     "POST ", collector.path or "/captures", " HTTP/1.1\r\n",

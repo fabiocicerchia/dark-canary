@@ -84,6 +84,8 @@ local function reset()
   -- sees the exact bytes the collector would.
   ngx_stub.sent = nil
   ngx_stub.connect_ok = true
+  ngx_stub.handshake = nil
+  ngx_stub.handshake_ok = true
   ngx_stub.reply = "HTTP/1.1 202 Accepted"
   ngx_stub.timer = { at = function(_, fn) fn(false); return true end }
   ngx_stub.socket = {
@@ -94,6 +96,11 @@ local function reset()
           ngx_stub.connected = { host = host, port = port }
           if ngx_stub.connect_ok then return true end
           return nil, "connection refused"
+        end,
+        sslhandshake = function(_, _, server_name, verify)
+          ngx_stub.handshake = { server_name = server_name, verify = verify }
+          if ngx_stub.handshake_ok then return true end
+          return nil, "certificate verify failed"
         end,
         send = function(_, parts) ngx_stub.sent = table.concat(parts); return #ngx_stub.sent end,
         receive = function() return ngx_stub.reply end,
@@ -299,6 +306,12 @@ test("scrub_args keys are redacted in a form-encoded request body", function()
   eq(wire.req_body, base64("user=ann&Password=[redacted]&next=%2F&token=[redacted]"), "req_body")
 end)
 
+test("a percent-encoded form key is redacted as the key it decodes to", function()
+  ngx_stub.body_data = "user=ann&pass%77ord=hunter2&to%6Ben=t&PASS%57ORD=x"
+  local wire = dc.to_wire({}, { path = "primary", scrub_args = { "password", "token" } })
+  eq(wire.req_body, base64("user=ann&pass%77ord=[redacted]&to%6Ben=[redacted]&PASS%57ORD=[redacted]"), "req_body")
+end)
+
 test("scrub_args keys reach the JSON scrubber too", function()
   ngx_stub.body_data = '{"token":"abc"}'
   local seen
@@ -400,6 +413,29 @@ test("a capture the collector refuses is logged", function()
   kit.capture_result = { correl_id = "x" }
   dc.log()
   eq(ngx_stub.logs[1].msg, "dark-canary: collector refused capture: HTTP/1.1 401 Unauthorized", "log")
+end)
+
+test("without tls there is no handshake", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  eq(ngx_stub.handshake, nil, "handshake")
+end)
+
+test("tls verifies the collector's certificate for its name", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log({ collector = { host = "10.0.0.5", tls = true, server_name = "collector.internal" } })
+  eq(ngx_stub.handshake.server_name, "collector.internal", "server_name")
+  eq(ngx_stub.handshake.verify, true, "verify")
+  eq(ngx_stub.sent ~= nil, true, "sent after the handshake")
+end)
+
+test("a failed tls handshake sends nothing, token included", function()
+  ngx_stub.handshake_ok = false
+  kit.capture_result = { correl_id = "x" }
+  dc.log({ collector = { host = "10.0.0.5", tls = true, token = "s3cret" } })
+  eq(ngx_stub.handshake.server_name, "10.0.0.5", "server_name defaults to host")
+  eq(ngx_stub.sent, nil, "sent")
+  eq(ngx_stub.logs[1].msg, "dark-canary: collector TLS handshake failed: certificate verify failed", "log")
 end)
 
 test("an accepted capture logs nothing", function()

@@ -217,9 +217,20 @@ the same value the collector was started with on both servers:
 log_by_lua_block { require("dark_canary").log({ collector = { host = "10.0.0.5", token = "…" } }) }
 ```
 
-The hook speaks plain HTTP and the collector serves no TLS, so the token and
-the scrubbed captures cross the wire in clear: keep that hop on a private
-network, or put a TLS-terminating proxy in front of the collector. A capture
+The collector serves no TLS. Without `tls`, the hook speaks plain HTTP and
+the token and the scrubbed captures cross the wire in clear, which is only
+acceptable on loopback or a network you trust. Anywhere else, put a
+TLS-terminating proxy in front of the collector and turn on `tls`, which
+verifies the proxy's certificate against `lua_ssl_trusted_certificate`:
+
+```nginx
+lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+lua_ssl_verify_depth 3;
+log_by_lua_block { require("dark_canary").log({ collector = {
+  host = "10.0.0.5", port = 8443, tls = true, server_name = "collector.internal", token = "…" } }) }
+```
+
+A failed handshake ships nothing and logs a warning. A capture
 the collector refuses — a wrong token is a 401 on every one — is logged as a
 warning at the edge.
 
