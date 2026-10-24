@@ -122,7 +122,8 @@ end
 -- A form key as the application will read it: `pass%77ord` and `pass+word`
 -- arrive as `password` and `pass word`, so they are compared decoded.
 local function form_decode(key)
-  return (key:gsub("+", " "):gsub("%%(%x%x)", function(hex) return string.char(tonumber(hex, 16)) end))
+  local spaced = key:gsub("%+", " ")
+  return (spaced:gsub("%%(%x%x)", function(hex) return string.char(tonumber(hex, 16)) end))
 end
 
 -- The leading "&" lets the first pair match the same pattern as the rest. The
