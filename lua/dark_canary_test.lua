@@ -1,8 +1,8 @@
 -- Unit tests for lua/dark_canary.lua.
 --
--- Plain asserts, no framework: the module is 77 lines and needs two stubs
--- (`ngx` and the nginx-lua-waf-kit `mirror` module), which is less setup than
--- any test runner would ask for.
+-- Plain asserts, no framework: the module needs three stubs (`ngx`, cjson and
+-- the nginx-lua-waf-kit `mirror` module), which is less setup than any test
+-- runner would ask for.
 --
 --   lua lua/dark_canary_test.lua        # from the repo root
 --
@@ -17,6 +17,53 @@ package.path = "lua/?.lua;" .. package.path
 local kit = {}
 local ngx_stub = {}
 
+-- cjson is OpenResty's, so the tests carry their own encoder. Keys are sorted
+-- so the payload is byte-stable and can be pinned as a fixture.
+local function encode(v)
+  local t = type(v)
+  if t == "string" then
+    return '"' .. v:gsub('[%c"\\]', function(c)
+      return string.format("\\u%04x", c:byte())
+    end) .. '"'
+  elseif t == "number" then
+    return v == math.floor(v) and string.format("%d", v) or tostring(v)
+  elseif t == "boolean" then
+    return tostring(v)
+  elseif t == "table" then
+    if #v > 0 then
+      local parts = {}
+      for _, x in ipairs(v) do parts[#parts + 1] = encode(x) end
+      return "[" .. table.concat(parts, ",") .. "]"
+    end
+    local keys = {}
+    for k in pairs(v) do keys[#keys + 1] = k end
+    table.sort(keys)
+    local parts = {}
+    for _, k in ipairs(keys) do parts[#parts + 1] = encode(k) .. ":" .. encode(v[k]) end
+    return "{" .. table.concat(parts, ",") .. "}"
+  end
+  error("cannot encode " .. t)
+end
+
+-- ngx.encode_base64, in arithmetic so it runs on a Lua 5.1 without bit ops.
+local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local function base64(s)
+  local out = {}
+  for i = 1, #s, 3 do
+    local a, b, c = s:byte(i, i + 2)
+    local n = a * 65536 + (b or 0) * 256 + (c or 0)
+    local quad = {}
+    for j = 4, 1, -1 do
+      quad[j] = B64:sub(n % 64 + 1, n % 64 + 1)
+      n = math.floor(n / 64)
+    end
+    if not b then quad[3] = "=" end
+    if not c then quad[4] = "=" end
+    out[#out + 1] = table.concat(quad)
+  end
+  return table.concat(out)
+end
+
 -- Reset to a known world before each test. Anything a test wants to observe
 -- (logs, shipped payloads, the args the kit was called with) accumulates here.
 local function reset()
@@ -25,7 +72,42 @@ local function reset()
   ngx_stub.logs = {}
   ngx_stub.WARN = "warn"
   ngx_stub.ERR = "err"
-  ngx_stub.log = function(level, msg) table.insert(ngx_stub.logs, { level = level, msg = msg }) end
+  ngx_stub.log = function(level, ...) table.insert(ngx_stub.logs, { level = level, msg = table.concat({ ... }) }) end
+  ngx_stub.encode_base64 = base64
+  ngx_stub.body_read = false
+  ngx_stub.body_data = nil
+  ngx_stub.req = {
+    read_body = function() ngx_stub.body_read = true end,
+    get_body_data = function() return ngx_stub.body_data end,
+  }
+  -- The timer runs at once and the socket records what it was sent, so a test
+  -- sees the exact bytes the collector would.
+  ngx_stub.sent = nil
+  ngx_stub.connect_ok = true
+  ngx_stub.handshake = nil
+  ngx_stub.handshake_ok = true
+  ngx_stub.reply = "HTTP/1.1 202 Accepted"
+  ngx_stub.timer = { at = function(_, fn) fn(false); return true end }
+  ngx_stub.socket = {
+    tcp = function()
+      return {
+        settimeout = function() end,
+        connect = function(_, host, port)
+          ngx_stub.connected = { host = host, port = port }
+          if ngx_stub.connect_ok then return true end
+          return nil, "connection refused"
+        end,
+        sslhandshake = function(_, _, server_name, verify)
+          ngx_stub.handshake = { server_name = server_name, verify = verify }
+          if ngx_stub.handshake_ok then return true end
+          return nil, "certificate verify failed"
+        end,
+        send = function(_, parts) ngx_stub.sent = table.concat(parts); return #ngx_stub.sent end,
+        receive = function() return ngx_stub.reply end,
+        close = function() end,
+      }
+    end,
+  }
 
   kit.decide_result = true
   kit.decide_args = nil
@@ -36,11 +118,21 @@ local function reset()
   kit.decide = function(o) kit.decide_args = o; return kit.decide_result end
   kit.body_filter = function(o) kit.body_filter_args = o; return "filtered" end
   kit.capture = function(o) kit.capture_args = o; return kit.capture_result end
-  kit.ship = function(capture, collector) kit.shipped = { capture = capture, collector = collector } end
+  kit.DEFAULTS = { max_body = 65536, scrub_fields = {} }
+  kit.scrub_body = function(body) return body end
 end
 
 _G.ngx = ngx_stub
 package.preload["mirror"] = function() return kit end
+package.preload["cjson.safe"] = function() return { encode = encode } end
+
+-- What the collector would receive: the request head and the JSON body.
+local function sent()
+  local raw = ngx_stub.sent
+  if not raw then return nil end
+  local head, body = raw:match("^(.-)\r\n\r\n(.*)$")
+  return head, body
+end
 
 local dc = require("dark_canary")
 
@@ -158,24 +250,262 @@ end)
 test("nothing is shipped when the kit produced no capture", function()
   kit.capture_result = nil
   dc.log()
-  eq(kit.shipped, nil, "shipped")
+  eq(ngx_stub.sent, nil, "sent")
 end)
 
 -- Which side of the mirror a capture came from is the one field the kit cannot
 -- know, and the collector cannot pair without it.
 test("the capture is stamped with its side and shipped to the collector", function()
-  kit.capture_result = { correl_id = "abc123", status = 200 }
-  dc.log({ path = "shadow" })
-  eq(kit.shipped ~= nil, true, "something was shipped")
-  eq(kit.shipped.capture.path, "shadow", "capture.path")
-  eq(kit.shipped.capture.correl_id, "abc123", "the kit's fields survive")
-  eq(kit.shipped.collector.port, 8099, "collector.port")
+  kit.capture_result = { correl_id = "abc123", path = "primary", status = 200 }
+  dc.log({ path = "shadow", collector = { host = "10.0.0.5" } })
+  local head, body = sent()
+  eq(head ~= nil, true, "something was shipped")
+  eq(head:match("^POST /captures HTTP/1.1") ~= nil, true, "request line")
+  eq(body:find('"path":"shadow"', 1, true) ~= nil, true, "capture.path")
+  eq(body:find('"correl_id":"abc123"', 1, true) ~= nil, true, "the kit's fields survive")
+  eq(ngx_stub.connected.port, 8099, "collector.port")
 end)
 
 test("the primary stamps its own side too", function()
   kit.capture_result = { correl_id = "x" }
   dc.log()
-  eq(kit.shipped.capture.path, "primary", "capture.path")
+  local _, body = sent()
+  eq(body:find('"path":"primary"', 1, true) ~= nil, true, "capture.path")
+end)
+
+-- --- the wire shape ----------------------------------------------------------
+--
+-- collector.Capture is the other half of this contract: res_body and req_body
+-- as base64 (Go's []byte), headers as lists. The kit names the response body
+-- `body` and captures no request body, so without this mapping every capture
+-- decoded with nothing to compare.
+
+test("the response body is renamed and base64-encoded", function()
+  kit.capture_result = { correl_id = "x", body = '{"a":1}' }
+  local wire = dc.to_wire(kit.capture_result, { path = "primary" })
+  eq(wire.res_body, base64('{"a":1}'), "res_body")
+  eq(wire.body, nil, "the kit's key does not reach the wire")
+  eq(kit.capture_result.body, '{"a":1}', "the kit's table is not mutated")
+end)
+
+test("the request body is captured, scrubbed and base64-encoded", function()
+  ngx_stub.body_data = '{"password":"hunter2","q":1}'
+  kit.scrub_body = function(body, fields)
+    eq(fields[1], "password", "scrub_fields reach the scrubber")
+    return (body:gsub("hunter2", "[redacted]"))
+  end
+  local wire = dc.to_wire({ correl_id = "x" }, { path = "primary", scrub_fields = { "password" } })
+  eq(wire.req_body, base64('{"password":"[redacted]","q":1}'), "req_body")
+end)
+
+-- The URI path redacts scrub_args; a login form carries the same keys in its
+-- body, and scrub_fields defaults to none.
+test("scrub_args keys are redacted in a form-encoded request body", function()
+  ngx_stub.body_data = "user=ann&Password=hunter2&next=%2F&token="
+  local wire = dc.to_wire({}, { path = "primary", scrub_args = { "password", "token" } })
+  eq(wire.req_body, base64("user=ann&Password=[redacted]&next=%2F&token=[redacted]"), "req_body")
+end)
+
+test("a percent-encoded form key is redacted as the key it decodes to", function()
+  ngx_stub.body_data = "user=ann&pass%77ord=hunter2&to%6Ben=t&PASS%57ORD=x"
+  local wire = dc.to_wire({}, { path = "primary", scrub_args = { "password", "token" } })
+  eq(wire.req_body, base64("user=ann&pass%77ord=[redacted]&to%6Ben=[redacted]&PASS%57ORD=[redacted]"), "req_body")
+end)
+
+test("scrub_args keys reach the JSON scrubber too", function()
+  ngx_stub.body_data = '{"token":"abc"}'
+  local seen
+  kit.scrub_body = function(body, fields) seen = fields; return body end
+  dc.to_wire({}, { path = "primary", scrub_fields = { "card" }, scrub_args = { "token", "CARD" } })
+  eq(#seen, 2, "the two lists are merged without repeats")
+  eq(seen[2], "token", "scrub_args key")
+end)
+
+-- Neither scrubber reads inside a multipart part, so its fields would ship in
+-- clear; the body is left out instead.
+test("a multipart request body is not shipped", function()
+  ngx_stub.body_data = '--b\r\nContent-Disposition: form-data; name="password"\r\n\r\nhunter2\r\n--b--\r\n'
+  ngx_stub.var.content_type = "Multipart/Form-Data; boundary=b"
+  local wire = dc.to_wire({}, { path = "primary", scrub_args = { "password" } })
+  eq(wire.req_body, nil, "req_body")
+end)
+
+test("the kit's default scrub_args apply when none are configured", function()
+  kit.DEFAULTS.scrub_args = { "password" }
+  ngx_stub.body_data = "password=hunter2"
+  local wire = dc.to_wire({}, { path = "primary" })
+  eq(wire.req_body, base64("password=[redacted]"), "req_body")
+end)
+
+test("a request body over max_body is cut at it", function()
+  ngx_stub.body_data = string.rep("x", 10)
+  local wire = dc.to_wire({}, { path = "primary", max_body = 4 })
+  eq(wire.req_body, base64("xxxx"), "req_body")
+end)
+
+-- The scrubber matches a whole "key":"value" pair; a cut through the value
+-- first would ship the start of the secret.
+test("the request body is scrubbed before it is cut", function()
+  ngx_stub.body_data = '{"password":"hunter2"}'
+  kit.scrub_body = function(body)
+    return (body:gsub('("password":)"[^"]*"', '%1"[redacted]"'))
+  end
+  local wire = dc.to_wire({}, { path = "primary", max_body = 16 })
+  eq(wire.req_body, base64('{"password":"[re'), "req_body")
+end)
+
+test("max_body = 0 captures no request body on either side", function()
+  ngx_stub.body_data = '{"id":7}'
+  local wire = dc.to_wire({}, { path = "shadow", max_body = 0 })
+  eq(wire.req_body, nil, "req_body")
+  ngx_stub.var["http_x_dark_canary_id"] = "abc123"
+  dc.decide({ path = "shadow", max_body = 0 })
+  eq(ngx_stub.body_read, false, "read_body called")
+end)
+
+test("no request body is no req_body, not an empty one", function()
+  local wire = dc.to_wire({}, { path = "primary" })
+  eq(wire.req_body, nil, "req_body")
+end)
+
+-- ngx gives a string for a header sent once; Go refuses a string where it
+-- wants []string, and refuses the whole capture with it.
+test("headers are always lists of values", function()
+  local wire = dc.to_wire({
+    req_headers = { accept = "application/json", cookie = { "a=1", "b=2" } },
+    res_headers = { ["content-type"] = "application/json" },
+  }, { path = "primary" })
+  eq(wire.req_headers.accept[1], "application/json", "single value")
+  eq(#wire.req_headers.cookie, 2, "repeated header kept whole")
+  eq(wire.res_headers["content-type"][1], "application/json", "response header")
+end)
+
+test("the shadow reads the request body so it can be captured", function()
+  ngx_stub.var["http_x_dark_canary_id"] = "abc123"
+  dc.decide({ path = "shadow" })
+  eq(ngx_stub.body_read, true, "read_body called")
+end)
+
+-- --- authentication ----------------------------------------------------------
+
+test("the collector token is sent when configured", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log({ collector = { token = "s3cret" } })
+  local head = sent()
+  eq(head:find("\r\nX-Dark-Canary-Token: s3cret\r\n", 1, true) ~= nil, true, "token header")
+end)
+
+test("no token configured sends no token header", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  local head = sent()
+  eq(head:find("X-Dark-Canary-Token", 1, true), nil, "token header")
+end)
+
+test("a token with a line break is refused rather than sent", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log({ collector = { token = "s3cret\r\nX-Evil: 1" } })
+  eq(ngx_stub.sent, nil, "sent")
+  eq(ngx_stub.logs[1].level, "err", "log level")
+end)
+
+test("an unreachable collector is logged, not raised", function()
+  ngx_stub.connect_ok = false
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  eq(ngx_stub.sent, nil, "sent")
+  eq(ngx_stub.logs[1].level, "warn", "log level")
+end)
+
+test("a capture the collector refuses is logged", function()
+  ngx_stub.reply = "HTTP/1.1 401 Unauthorized"
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  eq(ngx_stub.logs[1].msg, "dark-canary: collector refused capture: HTTP/1.1 401 Unauthorized", "log")
+end)
+
+test("without tls there is no handshake", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  eq(ngx_stub.handshake, nil, "handshake")
+end)
+
+test("tls verifies the collector's certificate for its name", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log({ collector = { host = "10.0.0.5", tls = true, server_name = "collector.internal" } })
+  eq(ngx_stub.handshake.server_name, "collector.internal", "server_name")
+  eq(ngx_stub.handshake.verify, true, "verify")
+  eq(ngx_stub.sent ~= nil, true, "sent after the handshake")
+end)
+
+test("a failed tls handshake sends nothing, token included", function()
+  ngx_stub.handshake_ok = false
+  kit.capture_result = { correl_id = "x" }
+  dc.log({ collector = { host = "10.0.0.5", tls = true, token = "s3cret" } })
+  eq(ngx_stub.handshake.server_name, "10.0.0.5", "server_name defaults to host")
+  eq(ngx_stub.sent, nil, "sent")
+  eq(ngx_stub.logs[1].msg, "dark-canary: collector TLS handshake failed: certificate verify failed", "log")
+end)
+
+test("an accepted capture logs nothing", function()
+  kit.capture_result = { correl_id = "x" }
+  dc.log()
+  eq(#ngx_stub.logs, 0, "logs")
+end)
+
+-- --- the seam ----------------------------------------------------------------
+--
+-- The payloads below are pinned in lua/testdata/ and decoded by the collector's
+-- own handler in cmd/dark-canary/edge_hook_test.go, so a change on either side
+-- of the seam fails a test on that side. The capture table is the exact shape
+-- nginx-lua-waf-kit's mirror.capture() returns.
+--
+--   DC_UPDATE_FIXTURES=1 lua lua/dark_canary_test.lua   # after a deliberate change
+
+local function kit_capture(body)
+  return {
+    correl_id   = "edge-1",
+    path        = "primary",
+    method      = "GET",
+    uri         = "/orders?id=7&token=[redacted]",
+    status      = 200,
+    req_headers = { accept = "application/json", ["x-dark-canary-id"] = "edge-1" },
+    res_headers = { ["content-type"] = "application/json", vary = { "Accept", "Origin" } },
+    body        = body,
+    truncated   = false,
+    latency_ms  = 12,
+    at          = 1700000000,
+  }
+end
+
+local function fixture(name, got)
+  local file = "lua/testdata/" .. name
+  if os.getenv("DC_UPDATE_FIXTURES") == "1" then
+    local f = assert(io.open(file, "w"))
+    f:write(got, "\n")
+    f:close()
+  end
+  local f = io.open(file, "r")
+  eq(f ~= nil, true, file .. " exists")
+  local want = f:read("*a"):gsub("\n$", "")
+  f:close()
+  eq(got, want, file)
+end
+
+test("the primary payload matches the fixture the collector decodes", function()
+  ngx_stub.body_data = '{"id":7}'
+  kit.capture_result = kit_capture('{"total":10,"ok":true}')
+  dc.log({ collector = { token = "s3cret" } })
+  local _, body = sent()
+  fixture("edge_primary.json", body)
+end)
+
+test("the shadow payload matches the fixture the collector decodes", function()
+  ngx_stub.body_data = '{"id":7}'
+  kit.capture_result = kit_capture('{"total":11,"ok":true}')
+  dc.log({ path = "shadow", collector = { token = "s3cret" } })
+  local _, body = sent()
+  fixture("edge_shadow.json", body)
 end)
 
 -- --- report ------------------------------------------------------------------
