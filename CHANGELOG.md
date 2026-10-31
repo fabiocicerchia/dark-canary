@@ -5,6 +5,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.4](https://github.com/fabiocicerchia/dark-canary/compare/v2.0.3...v2.0.4) (2026-10-31)
+
+
+### Bug Fixes
+
+* **lua:** ship edge captures in the shape the collector decodes ([#87](https://github.com/fabiocicerchia/dark-canary/issues/87)) ([c664a74](https://github.com/fabiocicerchia/dark-canary/commit/c664a74fbfc7da13598f942377667c69c965dab8))
+
 ## [2.0.3](https://github.com/fabiocicerchia/dark-canary/compare/v2.0.2...v2.0.3) (2026-10-21)
 
 
