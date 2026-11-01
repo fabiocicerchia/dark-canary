@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       # The hook runs under OpenResty's LuaJIT (5.1); the tests stub ngx and the
       # kit, so any 5.1-compatible interpreter exercises the same logic.
-      - uses: leafo/gh-actions-lua@6919171ccf181b826f44b9bca76307b577217377  # v13.0.0
+      - uses: leafo/gh-actions-lua@32909a2dea0a48c433aec79e7fcd31b4cd55800f  # v13.1.0
         with:
           luaVersion: "luajit-openresty"
       - name: test
@@ -109,7 +109,7 @@ jobs:
 
       # pre-commit runs the language-specific hooks defined in
       # .pre-commit-config.yaml. It no-ops gracefully if none apply.
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.x"
       - name: pre-commit
