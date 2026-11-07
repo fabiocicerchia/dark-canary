@@ -13,9 +13,9 @@ Feature: Health checks and shutdown
     And the body is "ok"
 
   @id:configuration-and-lifecycle.health-and-shutdown.002 @rule:lifecycle.shutdown.final-report-on-signal @gap @source:cmd/dark-canary/main.go#run
-  Scenario: On SIGTERM or Ctrl-C the process drains, prints the final report and exits cleanly
+  Scenario: On SIGTERM or Ctrl-C the process prints the final report and exits cleanly
     Given pairs have been compared since startup
     When the operator sends SIGTERM to dark-canary
-    Then in-flight requests get up to 5 seconds to finish
+    Then the listeners stop accepting new connections
     And the final text report is printed to stderr
-    And the process exits with code 0
+    And the process exits with code 0 without waiting for in-flight requests to finish

@@ -10,7 +10,7 @@ Feature: Branding the documentation site
     Given the docs theme defines the accent pair amber #fbbf24 and dark amber #d97706
     When a reader opens the splash page and then the rendered docs
     Then the splash title and its primary button use a gradient from #fbbf24 to #d97706
-    And the docs header, primary buttons and hero title use the same two colours
+    And the docs links, primary buttons and hero title use the same two colours
     And changing the accent pair in the docs theme changes both pages
 
   @id:docs.documentation-site.site-theme.002 @rule:docs.theme.no-network-assets @inferred @source:docs/stylesheets/extra.css#:root
@@ -41,8 +41,8 @@ Feature: Branding the documentation site
     And the navigation drawer title shows no logo icon
 
   @id:docs.documentation-site.site-theme.005 @rule:docs.theme.wide-tables-readable-on-narrow-screens @inferred @source:docs/stylesheets/extra.css#.md-typeset table:not([class]) @questionable
-  Scenario: A table wider than the screen is cut off rather than scrollable
+  Scenario: A table wider than the screen scrolls sideways rather than being cut off
     Given a docs page contains a table wider than the reader's screen
     When a reader opens that page on a narrow screen
     Then the table is shown as a rounded, bordered card
-    And the columns beyond the card's edge are cut off and cannot be scrolled into view
+    And the reader can scroll sideways to the columns beyond the screen's edge

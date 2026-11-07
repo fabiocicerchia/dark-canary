@@ -7,7 +7,7 @@ Feature: Starting from a built-in noise ruleset
 
   @id:noise-suppression.default-rules.001 @rule:noise.defaults.ignore-per-request-headers @verified @source:internal/noise/noise.go#Default @test:internal/noise/noise_test.go#TestUnmatchedPathsAreNeverSuppressed @test:internal/noise/noise_test.go#TestRulesetSuppressesThroughTheEngine
   Scenario Outline: Headers that differ on every request are not reported by default
-    Given a primary and a shadow response that differ only in the <header> header
+    Given a primary response that sends the <header> header and an otherwise identical shadow response that does not
     When the pair is compared
     Then no difference is reported for /headers/<header>
     And the pair counts 1 suppressed difference

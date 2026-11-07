@@ -6,7 +6,7 @@ Feature: Starting with a safe posture
   Scenario: A fresh start mirrors only reads, samples 1% and has a kill file
     Given the operator sets no safety options
     When the operator starts dark-canary
-    Then only GET and HEAD requests are mirrored
+    Then only GET, HEAD and OPTIONS requests are mirrored
     And the sample rate is 0.01
     And the kill file is /etc/dark-canary/kill
     And the largest accepted capture body is 1048576 bytes

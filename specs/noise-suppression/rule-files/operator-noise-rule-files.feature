@@ -3,7 +3,7 @@ Feature: Tuning noise with an operator rules file
   Lets operators tune suppression with a YAML file merged over the defaults, and refuses a file that would quietly do nothing or be misread, before it can skew a report.
 
   Background:
-    Given the operator starts dark-canary with a rules file
+    Given the operator passes a rules file with -rules
 
   @id:noise-suppression.rule-files.001 @rule:noise.rule-files.reject-unusable-rules @verified @source:internal/noise/noise.go#Load @test:internal/noise/noise_test.go#TestLoadRejectsRulesThatDoNothing
   Scenario Outline: A rules file containing an unusable rule is refused

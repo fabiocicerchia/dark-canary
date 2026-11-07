@@ -19,7 +19,7 @@ Feature: Running dark-canary from the container image
     Given the image's default command is the only place the listeners are set to every interface
     When the operator starts the container with only "-token s3cret" as arguments
     Then dark-canary starts
-    And the collector listens on 127.0.0.1:8099 and the proxy on 127.0.0.1:8080 inside the container
+    And the collector listens on 127.0.0.1:8099 inside the container and no proxy listener is started
     And neither published port 8099 nor 8080 answers from outside the container
 
   @id:developer-tooling.container-image.003 @rule:packaging.container-image.runs-unprivileged-without-shell @inferred @source:Dockerfile#USER
@@ -33,6 +33,6 @@ Feature: Running dark-canary from the container image
   @id:developer-tooling.container-image.004 @rule:packaging.container-image.verifies-https-upstreams @inferred @source:Dockerfile#COPY
   Scenario: The container can mirror to primary and shadow upstreams served over HTTPS
     Given the primary and shadow upstreams use https URLs with certificates from a public certificate authority
-    When the operator starts the container in proxy mode with -primary https://primary.example.com and -shadow https://shadow.example.com
+    When the operator starts the container in proxy mode with -proxy-listen 0.0.0.0:8080, -primary https://primary.example.com and -shadow https://shadow.example.com
     Then clients get the primary's responses through port 8080
     And the shadow receives the mirrored requests with no certificate verification failures

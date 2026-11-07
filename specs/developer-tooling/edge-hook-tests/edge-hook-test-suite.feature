@@ -10,7 +10,7 @@ Feature: Running the edge capture hook's test suite
     Given the capture hook has <state>
     When the contributor runs the edge hook test suite
     Then each test is listed with "ok" or "FAIL" before its name
-    And a closing line reads "<count> tests, <failed> failed", followed by the reason for each failure
+    And a closing line gives the number of tests run and "<failed> failed", followed by the reason for each failure
     And the run exits with status <exit>
 
     Examples:

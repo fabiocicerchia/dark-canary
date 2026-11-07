@@ -9,12 +9,12 @@ Feature: Telling failures apart by exit code
     Then the process exits with code <code>
 
     Examples:
-      | failure                                          | code |
-      | a flag or flag combination is refused            | 64   |
-      | the -rules file was read but does not hold up    | 65   |
-      | the -rules file does not exist                   | 66   |
-      | the collector or proxy address is already in use | 71   |
-      | a failure with no better classification          | 70   |
+      | failure                                              | code |
+      | a flag value or flag combination dark-canary refuses | 64   |
+      | the -rules file was read but does not hold up        | 65   |
+      | the -rules file does not exist                       | 66   |
+      | the collector or proxy address is already in use     | 71   |
+      | a failure with no better classification              | 70   |
 
   @id:configuration-and-lifecycle.exit-codes.002 @rule:lifecycle.exit.bind-failure-prints-no-report @gap @source:cmd/dark-canary/main.go#run
   Scenario: A listener that never came up prints no empty report

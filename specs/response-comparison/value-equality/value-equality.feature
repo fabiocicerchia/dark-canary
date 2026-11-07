@@ -3,7 +3,7 @@ Feature: Deciding when two values are equal
   Makes sure serialisation choices (key order, whitespace, how a number is written) are not reported as divergence, so an identical shadow reads as identical.
 
   Background:
-    Given Given a primary and a shadow response captured for the same request
+    Given a primary and a shadow response captured for the same request
 
   @id:response-comparison.value-equality.001 @rule:response.value-equality.formatting-and-key-order-ignored @verified @source:internal/diff/diff.go#decodeJSON @test:internal/diff/diff_test.go#TestKeyOrderIsNotADifference @test:internal/diff/diff_test.go#TestWhitespaceIsNotADifference @test:internal/diff/diff_test.go#FuzzDiffBodies
   Scenario Outline: JSON bodies that differ only in key order or whitespace are identical

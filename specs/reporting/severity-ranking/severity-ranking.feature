@@ -21,8 +21,8 @@ Feature: Ranking differences by how much they should worry the operator
 
   @id:reporting.severity-ranking.002 @rule:reporting.text.one-line-per-finding @verified @source:internal/report/report.go#Text @test:internal/report/report_test.go#TestTextRendersOneLinePerGroup @questionable
   Scenario: Each finding takes one line of the text report with a shortened example
-    Given a finding's primary value spans two lines and its shadow value is 80 characters long
+    Given a finding's primary value spans two lines and its shadow value is 80 bytes long
     When the operator reads the text report
     Then the finding appears as one row with severity, count, rate, kind, path and primary → shadow
-    And line breaks and tabs in the example values are shown as spaces
-    And example values longer than 40 characters are cut to 40 and end with "…"
+    And newlines and tabs in the example values are shown as spaces
+    And example values longer than 40 bytes are cut to 40 bytes and end with "…"
