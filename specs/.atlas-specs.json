@@ -1,0 +1,1573 @@
+{
+ "excluded": {
+  "cmd/dark-canary": [
+   {
+    "candidate": "Constant-time token comparison",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/main.go#server.authorised"
+   },
+   {
+    "candidate": "Read-header timeout of 5s on both listeners",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/main.go#run"
+   },
+   {
+    "candidate": "Proxy preserves the client Host header and sets X-Forwarded-* to the primary",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/proxy.go#newProxy"
+   },
+   {
+    "candidate": "Primary response streamed through a tee rather than buffered; capture handed over on close",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/proxy.go#teeBody"
+   },
+   {
+    "candidate": "Proxy correlation ids generated as a base-36 counter in-process",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/proxy.go#proxy.ServeHTTP"
+   },
+   {
+    "candidate": "Skipped-mirror counter in proxy (never exposed)",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/proxy.go#proxy"
+   },
+   {
+    "candidate": "Background sweep of pending captures every correlate-timeout",
+    "covered_by": "capture-collection/buffer-limits (collector module)",
+    "reason": "DUPLICATE_OF",
+    "source": "cmd/dark-canary/main.go#server.sweep"
+   },
+   {
+    "candidate": "-correlate-timeout and -max-pending flag defaults",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "cmd/dark-canary/config.go#parseFlags"
+   },
+   {
+    "candidate": "Usage error keeps the wrapped message verbatim",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/exit.go#usagef"
+   },
+   {
+    "candidate": "Exit codes distinct and within 0..125, never 1",
+    "covered_by": "lifecycle.exit.codes-classify-failures",
+    "reason": "TRIVIAL",
+    "source": "cmd/dark-canary/exit.go#exitCode"
+   },
+   {
+    "candidate": "Shadow response read up to the body cap then drained for connection reuse",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/proxy.go#proxy.mirrorToShadow"
+   },
+   {
+    "candidate": "Diagnostics logged via slog to stderr at INFO",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "cmd/dark-canary/main.go#main"
+   },
+   {
+    "candidate": "Demo service used by the e2e harness",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "e2e/demo/cmd/demo-service/main.go"
+   },
+   {
+    "candidate": "Auth checked before method on /captures (wrong-token GET gets 401 not 405)",
+    "covered_by": "access.token.data-endpoints-require-token",
+    "reason": "TRIVIAL",
+    "source": "cmd/dark-canary/main.go#server.handleCapture"
+   },
+   {
+    "candidate": "Data endpoints refuse callers without the right token",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.authorised"
+   },
+   {
+    "candidate": "A caller presenting the configured token is let through",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.authorised"
+   },
+   {
+    "candidate": "The tool refuses to listen beyond loopback without a token",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/config.go#options.safetyConfig"
+   },
+   {
+    "candidate": "A well-formed capture of a read request is accepted",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleCapture"
+   },
+   {
+    "candidate": "A capture the collector cannot use is rejected",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleCapture"
+   },
+   {
+    "candidate": "Under reads-only, captures of write requests are refused",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleCapture"
+   },
+   {
+    "candidate": "A capture that names no method gets past the reads-only check",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleCapture"
+   },
+   {
+    "candidate": "In proxy mode a write is served to the client but never sent to the shadow",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/proxy.go#proxy.mirror"
+   },
+   {
+    "candidate": "Write mirroring is accepted only when enabled on purpose, and always raises a warning",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/config.go#options.safetyConfig"
+   },
+   {
+    "candidate": "While the kill switch is engaged, the collector refuses captures",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleCapture"
+   },
+   {
+    "candidate": "While the kill switch is engaged, the proxy still serves clients but stops mirroring",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/proxy.go#proxy.mirror"
+   },
+   {
+    "candidate": "The client gets the primary's response and the shadow's answer is compared against it",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/proxy.go#proxy.ServeHTTP"
+   },
+   {
+    "candidate": "Only the configured fraction of eligible requests is mirrored",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/proxy.go#proxy.mirror"
+   },
+   {
+    "candidate": "When too many mirrored requests are in flight, new requests are served but not mirrored",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/proxy.go#proxy.mirror"
+   },
+   {
+    "candidate": "A request whose body exceeds the body cap is served but not compared",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/proxy.go#proxy.ServeHTTP"
+   },
+   {
+    "candidate": "A failing or slow shadow never changes the client's response",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/proxy.go#proxy.mirrorToShadow"
+   },
+   {
+    "candidate": "Captured bodies are redacted and capped before they are stored",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.ingest"
+   },
+   {
+    "candidate": "A field named in -scrub is also redacted when it appears as a header",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.ingest"
+   },
+   {
+    "candidate": "Guard-rail values that cannot hold are refused at startup",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/config.go#options.safetyConfig"
+   },
+   {
+    "candidate": "Proxy mode needs both a valid primary and a valid shadow, or neither",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/config.go#options.upstreams"
+   },
+   {
+    "candidate": "An operator ruleset is merged on top of the built-in noise rules",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/config.go#options.rules"
+   },
+   {
+    "candidate": "With -report-every set, the report is printed to stderr on that interval",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.periodic"
+   },
+   {
+    "candidate": "A primary and shadow capture that disagree show up as a grouped divergence",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.consume"
+   },
+   {
+    "candidate": "The report is plain text by default and JSON on request",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleReport"
+   },
+   {
+    "candidate": "Stats account for every capture and show whether the kill switch is engaged",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleStats"
+   },
+   {
+    "candidate": "The dashboard page opens without a token and loads nothing from elsewhere",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/dashboard.go#server.handleDashboard"
+   },
+   {
+    "candidate": "Any other unknown path on the collector is not found",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/dashboard.go#server.handleDashboard"
+   }
+  ],
+  "collector/collector": [
+   {
+    "candidate": "Zero or negative options fall back to 30s timeout, 10,000 waiting captures, 256-pair backlog",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/collector/collector.go#New"
+   },
+   {
+    "candidate": "The /stats endpoint exposes the counters with their JSON names and requires the access token",
+    "covered_by": "reporting/pipeline-stats (the cmd/dark-canary module)",
+    "reason": "DUPLICATE_OF",
+    "source": "cmd/dark-canary/main.go#server.handleStats"
+   },
+   {
+    "candidate": "Captures pair only when both reach the same collector process (in-memory buffer)",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/collector/collector.go#Buffer"
+   },
+   {
+    "candidate": "A silent shadow keeps pending bounded by the timeout window",
+    "covered_by": "collection.buffer.unpaired-captures-expire",
+    "reason": "DUPLICATE_OF",
+    "source": "internal/collector/collector.go#Buffer.expire"
+   },
+   {
+    "candidate": "Sweep returns the number of captures it expired",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/collector/collector.go#Buffer.Sweep"
+   },
+   {
+    "candidate": "Capture arrival time defaults to now when unset",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/collector/collector.go#Buffer.Ingest"
+   },
+   {
+    "candidate": "Order-slice compaction is O(n) on removal",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/collector/collector.go#Buffer.compactOrder"
+   },
+   {
+    "candidate": "Capture JSON field names (path, correl_id, uri, req_headers, ...) as the wire shape",
+    "covered_by": "capture-collection/capture-intake and traffic-mirroring/capture-shipping",
+    "reason": "DUPLICATE_OF",
+    "source": "internal/collector/collector.go#Capture"
+   },
+   {
+    "candidate": "Test clock helper and buffer constructor",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "internal/collector/collector_test.go#newTestBuffer"
+   },
+   {
+    "candidate": "A primary and a shadow capture with the same correlation id form one comparison, whichever arrives first",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/collector/collector.go#Buffer.Ingest"
+   },
+   {
+    "candidate": "Two captures from the same side never pair with each other; the newer one waits",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/collector/collector.go#Buffer.Ingest"
+   },
+   {
+    "candidate": "A capture without a correlation id or naming an unknown side is discarded, and still counted",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/collector/collector.go#Buffer.Ingest"
+   },
+   {
+    "candidate": "A capture whose partner does not arrive within the pairing timeout expires, and a late partner does not pair with it",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/collector/collector.go#Buffer.expire"
+   },
+   {
+    "candidate": "When the waiting limit is reached, the oldest waiting capture is dropped to make room, and counted",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/collector/collector.go#Buffer.evictOldest"
+   },
+   {
+    "candidate": "When comparison falls behind, new pairs are dropped and counted instead of holding up captures",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/collector/collector.go#Buffer.Ingest"
+   },
+   {
+    "candidate": "A same-side retry restarts its own timeout but keeps its place in line, which holds back expiry of captures that arrived after it",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/collector/collector.go#Buffer.expire"
+   }
+  ],
+  "dark-canary/dockerfile": [
+   {
+    "candidate": "Multi-stage build with golang base image pinned by digest",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Dockerfile#FROM"
+   },
+   {
+    "candidate": "Module download cached in its own layer before copying source",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Dockerfile#RUN"
+   },
+   {
+    "candidate": "Static, stripped, trimpath build with CGO disabled",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Dockerfile#RUN"
+   },
+   {
+    "candidate": "Ports 8080 and 8099 declared with EXPOSE",
+    "covered_by": "packaging.container-image.default-command-requires-token",
+    "reason": "DUPLICATE_OF",
+    "source": "Dockerfile#EXPOSE"
+   },
+   {
+    "candidate": "ENTRYPOINT is the dark-canary binary",
+    "covered_by": "packaging.container-image.arguments-replace-default-listeners",
+    "reason": "DUPLICATE_OF",
+    "source": "Dockerfile#ENTRYPOINT"
+   }
+  ],
+  "dark-canary/makefile": [
+   {
+    "candidate": "make help lists every documented target with its description, and is the default goal",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#help"
+   },
+   {
+    "candidate": "make build compiles ./cmd/dark-canary into bin/dark-canary",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#build"
+   },
+   {
+    "candidate": "make test runs go test -race -count=1 over every package",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#test"
+   },
+   {
+    "candidate": "make test-lua runs the capture hook's test suite with plain lua",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "Makefile#test-lua"
+   },
+   {
+    "candidate": "make e2e builds the binary, then runs the e2e-tagged tests with a 5 minute timeout",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "Makefile#e2e"
+   },
+   {
+    "candidate": "make tidy / make clean tidy the Go modules and remove bin/",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#clean"
+   },
+   {
+    "candidate": "make setup installs the pre-commit hook; make lint runs every pre-commit check on the whole tree",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#lint"
+   },
+   {
+    "candidate": "make install with PREFIX installs the binary (0755) and man page (0644) under DESTDIR/PREFIX; without PREFIX it go-installs the binary and copies the man page to USER_MANDIR. USER_MANDIR is not defined anywhere in the repo, so a plain `make install` runs `install -d \"\"` and fails before the man page is installed (likely bug)",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#install"
+   },
+   {
+    "candidate": "make uninstall removes what make install put down, for both the PREFIX and the per-user layout",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#uninstall"
+   },
+   {
+    "candidate": "make run / format / analyze run the binary with ARGS, gofmt -w the tree, and run golangci-lint",
+    "covered_by": "",
+    "reason": "TECH_BUILD",
+    "source": "Makefile#run"
+   }
+  ],
+  "diff/diff": [
+   {
+    "candidate": "Headers and body keys are walked in sorted order so the output is deterministic",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/diff/diff.go#structural.diffHeaders"
+   },
+   {
+    "candidate": "Arrays are offered whole to the noise rules before their elements are compared",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/diff/diff.go#structural.walkArray"
+   },
+   {
+    "candidate": "Suppressor contract: must return true only for values that genuinely differ",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/diff/diff.go#Suppressor"
+   },
+   {
+    "candidate": "Multi-value headers are joined with ', ' before comparing",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "internal/diff/diff.go#headerValue"
+   },
+   {
+    "candidate": "Diff never panics on arbitrary production bodies (fuzzed)",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "internal/diff/diff_test.go#FuzzDiffBodies"
+   },
+   {
+    "candidate": "Result carries the correlation id, method and URL of the primary",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/diff/diff.go#structural.Diff"
+   },
+   {
+    "candidate": "Truncation length falls back to 200 when unset or non-positive",
+    "covered_by": "response.structural-diff.long-values-truncated",
+    "reason": "DUPLICATE_OF",
+    "source": "internal/diff/diff.go#NewEngine"
+   },
+   {
+    "candidate": "Identical() is true when no differences remain",
+    "covered_by": "response.value-equality.formatting-and-key-order-ignored",
+    "reason": "DUPLICATE_OF",
+    "source": "internal/diff/diff.go#Result.Identical"
+   },
+   {
+    "candidate": "Each body divergence is reported at its JSON path with both sides' values",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#structural.walkObject"
+   },
+   {
+    "candidate": "Response headers are compared by name regardless of letter case",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#structural.diffHeaders"
+   },
+   {
+    "candidate": "Transport headers never count as a difference, even with no noise rules",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#structural.diffHeaders"
+   },
+   {
+    "candidate": "Bodies that are not JSON on either side are compared byte for byte",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#structural.diffBodies"
+   },
+   {
+    "candidate": "Long values in a difference are cut short and their real size is stated",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#structural.render"
+   },
+   {
+    "candidate": "Differences removed by noise rules are counted, never silently dropped",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#sink.suppressed"
+   },
+   {
+    "candidate": "Each divergence is labelled with the kind of change it is",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#structural.walk"
+   },
+   {
+    "candidate": "An array that changes length is reported as one shape difference, plus any changed elements in the shared positions",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/diff/diff.go#structural.walkArray"
+   }
+  ],
+  "lua/dark-canary": [
+   {
+    "candidate": "On the primary, the whole mirror decision (kill switch, reads-only, sampling, id generation) is delegated to the nginx-lua-waf-kit mirror module",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "lua/dark_canary.lua#decide"
+   },
+   {
+    "candidate": "body_filter passes merged options to the kit",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "lua/dark_canary.lua#body_filter"
+   },
+   {
+    "candidate": "Merging options does not mutate the shared DEFAULTS table",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "lua/dark_canary.lua#merge"
+   },
+   {
+    "candidate": "The shadow explicitly reads the request body so it can be captured",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "lua/dark_canary.lua#decide"
+   },
+   {
+    "candidate": "Captures are posted from a zero-delay timer over a cosocket with Connection: close",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "lua/dark_canary.lua#ship"
+   },
+   {
+    "candidate": "Nothing is shipped when the kit produced no capture",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "lua/dark_canary.lua#log"
+   },
+   {
+    "candidate": "A capture that cannot be JSON-encoded or queued is dropped (queue failure logged)",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "lua/dark_canary.lua#ship"
+   },
+   {
+    "candidate": "Without TLS no handshake is attempted",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "lua/dark_canary.lua#post"
+   },
+   {
+    "candidate": "Default options apply when none are passed; single options override defaults",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "lua/dark_canary.lua#merge"
+   },
+   {
+    "candidate": "Plain Lua test suite with stubs and fixture regeneration via DC_UPDATE_FIXTURES",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "lua/dark_canary_test.lua"
+   },
+   {
+    "candidate": "A mirrored request is captured on the shadow under the correlation id the primary gave it",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "lua/dark_canary.lua#decide"
+   },
+   {
+    "candidate": "A shadow request with no correlation id is not captured",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "lua/dark_canary.lua#decide"
+   },
+   {
+    "candidate": "Every capture says which side of the mirror it came from",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "lua/dark_canary.lua#to_wire"
+   },
+   {
+    "candidate": "Edge captures reach the collector in the shape it decodes",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "lua/dark_canary.lua#to_wire"
+   }
+  ],
+  "lua/dark-canary-test": [
+   {
+    "candidate": "Stubs for ngx, cjson.safe and the nginx-lua-waf-kit mirror module, reset before every test",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "lua/dark_canary_test.lua#reset"
+   },
+   {
+    "candidate": "Test-only JSON encoder with sorted keys and an arithmetic base64 encoder for Lua 5.1",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "lua/dark_canary_test.lua#encode"
+   },
+   {
+    "candidate": "Suite must be run from the repository root (package.path is lua/?.lua and fixtures are relative paths)",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "lua/dark_canary_test.lua#fixture"
+   },
+   {
+    "candidate": "Hook behaviours the suite asserts (option merging, shadow captures unconditionally and adopts the correlation id, no id means no capture, header-name translation, side stamping, wire shape with base64 bodies and list headers, request-body scrubbing, multipart omission, max_body cut after scrubbing, collector token and CRLF refusal, TLS verification, failure logging)",
+    "covered_by": "lua/dark_canary.lua module (traffic-mirroring/edge-capture-hook, capture-shipping, safety-and-access/data-scrubbing); this file only exercises them",
+    "reason": "TECH_DEVTOOLING",
+    "source": "lua/dark_canary_test.lua"
+   }
+  ],
+  "noise/noise": [
+   {
+    "candidate": "Ruleset.Apply post-hoc filtering of a stored diff result",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/noise/noise.go#Ruleset.Apply"
+   },
+   {
+    "candidate": "Rule reasons are carried into the report",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/noise/noise.go#Rule"
+   },
+   {
+    "candidate": "Default ruleset stays at 10 rules or fewer, each with a reason",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "internal/noise/noise_test.go#TestDefaultsAreShortEnoughToNotHideFindings"
+   },
+   {
+    "candidate": "Glob matching runs in linear time and never hangs on many ** segments",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/noise/noise.go#matchSegments"
+   },
+   {
+    "candidate": "Canonical JSON rendering so map key order does not affect equality",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/noise/noise.go#canonical"
+   },
+   {
+    "candidate": "A rule with both ignore and normalise set: ignore wins",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "internal/noise/noise.go#Ruleset.Suppress"
+   },
+   {
+    "candidate": "Ignore rule suppresses a differing value at its location",
+    "covered_by": "noise.paths.segment-glob",
+    "reason": "DUPLICATE_OF",
+    "source": "internal/noise/noise.go#Ruleset.Suppress"
+   },
+   {
+    "candidate": "Within-file later rule overrides earlier one",
+    "covered_by": "noise.rule-files.operator-rules-override-defaults",
+    "reason": "DUPLICATE_OF",
+    "source": "internal/noise/noise.go#Ruleset.Match"
+   },
+   {
+    "candidate": "An operator rule overrides a default or an earlier rule for the same location",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/noise/noise.go#Ruleset.Merge"
+   },
+   {
+    "candidate": "A rule applies to the locations its glob covers and to no others",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/noise/noise.go#Ruleset.Match"
+   },
+   {
+    "candidate": "A normalisation hides only the differences it describes",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/noise/noise.go#Ruleset.Suppress"
+   },
+   {
+    "candidate": "A normalisation that does not fit the values leaves the difference reported",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/noise/noise.go#normaliser.equal"
+   },
+   {
+    "candidate": "An ignored list is counted as a suppressed difference even when both sides are identical",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/noise/noise.go#Ruleset.Suppress"
+   }
+  ],
+  "report/report": [
+   {
+    "candidate": "Aggregator is safe for concurrent writes and report reads",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/report/report.go#Aggregator"
+   },
+   {
+    "candidate": "Text report returns the first write error via errWriter",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/report/report.go#errWriter"
+   },
+   {
+    "candidate": "Severity constants start at 1 so the zero value is invalid",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/report/report.go#Severity"
+   },
+   {
+    "candidate": "Headline states the observation window (\"N pairs compared over <duration>\") and JSON carries since/now and first_at/last_at per finding",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "internal/report/report.go#Text"
+   },
+   {
+    "candidate": "Injectable clock for the report window",
+    "covered_by": "",
+    "reason": "TECH_DEVTOOLING",
+    "source": "internal/report/report.go#New"
+   },
+   {
+    "candidate": "JSON vs text format selection and token guard on /report",
+    "covered_by": "not in this module (cmd/dark-canary); belongs to reporting/report-formats and safety-and-access/access-token",
+    "reason": "UNVERIFIABLE",
+    "source": "cmd/dark-canary/main.go#server.handleReport"
+   },
+   {
+    "candidate": "The agreement rate is the share of compared pairs that were identical",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/report/report.go#Summary.AgreementRate"
+   },
+   {
+    "candidate": "The report says how many differences the noise rules hid",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/report/report.go#Aggregator.Add"
+   },
+   {
+    "candidate": "The same difference seen again is one finding with a count, a rate and its first example",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/report/report.go#Aggregator.Add"
+   },
+   {
+    "candidate": "A rare severe difference is listed above a frequent minor one",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/report/report.go#Aggregator.Summary"
+   }
+  ],
+  "safety/safety": [
+   {
+    "candidate": "Kill switch answer cached per TTL so the hot path does not stat per request",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/safety/safety.go#FileKillSwitch.Engaged"
+   },
+   {
+    "candidate": "KillSwitch interface abstraction",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/safety/safety.go#KillSwitch"
+   },
+   {
+    "candidate": "Nil scrubber scrubs no body fields so callers need not branch",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/safety/safety.go#Scrubber.Body"
+   },
+   {
+    "candidate": "Empty field names in the scrub list are skipped",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "internal/safety/safety.go#NewScrubber"
+   },
+   {
+    "candidate": "Config JSON field names (mirrorReadsOnly, sampleRate, ...)",
+    "covered_by": "",
+    "reason": "INTERNAL_MECHANISM",
+    "source": "internal/safety/safety.go#Config"
+   },
+   {
+    "candidate": "Captures over the body cap are truncated on arrival",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#Config"
+   },
+   {
+    "candidate": "Proxy mode stops mirroring while the kill switch is engaged",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#FileKillSwitch.Engaged"
+   },
+   {
+    "candidate": "Configured fields are redacted wherever they appear in a JSON body",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#Scrubber.Body"
+   },
+   {
+    "candidate": "Credential headers are redacted even when nothing is configured",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#Scrubber.Header"
+   },
+   {
+    "candidate": "A header named as a scrub field is redacted regardless of letter case",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#Scrubber.Header"
+   },
+   {
+    "candidate": "A sample rate outside 0 to 1 or a non-positive body cap is refused at startup",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#Config.Validate"
+   },
+   {
+    "candidate": "Turning on write mirroring starts with a loud warning about real writes",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#Config.Validate"
+   },
+   {
+    "candidate": "While the kill file exists, captures are refused",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#FileKillSwitch.Engaged"
+   },
+   {
+    "candidate": "Removing the kill file resumes processing",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#FileKillSwitch.Engaged"
+   },
+   {
+    "candidate": "With no kill file configured, the kill switch can never stop anything",
+    "covered_by": "",
+    "reason": "UNVERIFIABLE",
+    "source": "internal/safety/safety.go#FileKillSwitch.Engaged"
+   }
+  ]
+ },
+ "lifted": {
+  "cmd/dark-canary": [
+   {
+    "from_source": "internal/safety/safety.go#FileKillSwitch.Engaged",
+    "rule": "safety.kill-switch.ingestion-refused: an existing kill file stops ingestion (FileKillSwitch is the enforcing layer)"
+   },
+   {
+    "from_source": "internal/safety/safety.go#Config.Validate",
+    "rule": "config.startup.unsafe-guard-rails-refused: sample rate must be within 0..1 and the body cap must be positive"
+   },
+   {
+    "from_source": "internal/safety/safety.go#Scrubber.Header",
+    "rule": "scrubbing.arrival.scrub-fields-also-redact-headers: -scrub names redact matching headers, ignoring case"
+   }
+  ],
+  "collector/collector": [],
+  "dark-canary/dockerfile": [
+   {
+    "from_source": "cmd/dark-canary/config.go#safetyConfig",
+    "rule": "dark-canary refuses to start when the collector is reachable beyond loopback without an access token, exiting with the usage code 64"
+   }
+  ],
+  "dark-canary/makefile": [],
+  "diff/diff": [],
+  "lua/dark-canary": [],
+  "lua/dark-canary-test": [],
+  "noise/noise": [],
+  "report/report": [],
+  "safety/safety": []
+ },
+ "retired": [],
+ "scenarios": {
+  "configuration-and-lifecycle.exit-codes.001": {
+   "file": "specs/configuration-and-lifecycle/exit-codes/exit-codes.feature",
+   "fingerprint": "c23384c5abfb",
+   "human": false,
+   "rule": "lifecycle.exit.codes-classify-failures",
+   "source": "cmd/dark-canary/exit.go#exitCode",
+   "status": "verified",
+   "test": "cmd/dark-canary/exit_test.go#TestExitCodeClassifiesEveryFailure",
+   "tests": [
+    "cmd/dark-canary/exit_test.go#TestExitCodeClassifiesEveryFailure",
+    "cmd/dark-canary/exit_test.go#TestExitCodesAreDistinctAndInRange"
+   ]
+  },
+  "configuration-and-lifecycle.exit-codes.002": {
+   "file": "specs/configuration-and-lifecycle/exit-codes/exit-codes.feature",
+   "fingerprint": "593a460aa62d",
+   "human": false,
+   "rule": "lifecycle.exit.bind-failure-prints-no-report",
+   "source": "cmd/dark-canary/main.go#run",
+   "status": "gap",
+   "test": "",
+   "tests": []
+  },
+  "configuration-and-lifecycle.health-and-shutdown.001": {
+   "file": "specs/configuration-and-lifecycle/health-and-shutdown/health-and-shutdown.feature",
+   "fingerprint": "5e413bf27d86",
+   "human": false,
+   "rule": "lifecycle.health.healthz-open",
+   "source": "cmd/dark-canary/main.go#routes",
+   "status": "gap",
+   "test": "",
+   "tests": []
+  },
+  "configuration-and-lifecycle.health-and-shutdown.002": {
+   "file": "specs/configuration-and-lifecycle/health-and-shutdown/health-and-shutdown.feature",
+   "fingerprint": "593a460aa62d",
+   "human": false,
+   "rule": "lifecycle.shutdown.final-report-on-signal",
+   "source": "cmd/dark-canary/main.go#run",
+   "status": "gap",
+   "test": "",
+   "tests": []
+  },
+  "configuration-and-lifecycle.startup-configuration.001": {
+   "file": "specs/configuration-and-lifecycle/startup-configuration/safety-posture-at-startup.feature",
+   "fingerprint": "97a7ffdec643",
+   "human": false,
+   "rule": "safety.config.safe-defaults",
+   "source": "internal/safety/safety.go#Default",
+   "status": "verified",
+   "test": "internal/safety/safety_test.go#TestDefaultsAreTheSafePosture",
+   "tests": [
+    "internal/safety/safety_test.go#TestDefaultsAreTheSafePosture"
+   ]
+  },
+  "developer-tooling.container-image.001": {
+   "file": "specs/developer-tooling/container-image/container-image.feature",
+   "fingerprint": "6da85b3d1963",
+   "human": false,
+   "rule": "packaging.container-image.default-command-requires-token",
+   "source": "Dockerfile#CMD",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "developer-tooling.container-image.002": {
+   "file": "specs/developer-tooling/container-image/container-image.feature",
+   "fingerprint": "6da85b3d1963",
+   "human": false,
+   "rule": "packaging.container-image.arguments-replace-default-listeners",
+   "source": "Dockerfile#CMD",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "developer-tooling.container-image.003": {
+   "file": "specs/developer-tooling/container-image/container-image.feature",
+   "fingerprint": "ddeb68341211",
+   "human": false,
+   "rule": "packaging.container-image.runs-unprivileged-without-shell",
+   "source": "Dockerfile#USER",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "developer-tooling.container-image.004": {
+   "file": "specs/developer-tooling/container-image/container-image.feature",
+   "fingerprint": "e123ae90d068",
+   "human": false,
+   "rule": "packaging.container-image.verifies-https-upstreams",
+   "source": "Dockerfile#COPY",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "developer-tooling.edge-hook-tests.001": {
+   "file": "specs/developer-tooling/edge-hook-tests/edge-hook-test-suite.feature",
+   "fingerprint": "440362ee8bb7",
+   "human": false,
+   "rule": "devtooling.edge-hook-tests.exit-status-reflects-failures",
+   "source": "lua/dark_canary_test.lua#test",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "developer-tooling.edge-hook-tests.002": {
+   "file": "specs/developer-tooling/edge-hook-tests/edge-hook-test-suite.feature",
+   "fingerprint": "040d78955d08",
+   "human": false,
+   "rule": "devtooling.edge-hook-tests.payload-drift-fails",
+   "source": "lua/dark_canary_test.lua#fixture",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#the primary payload matches the fixture the collector decodes",
+   "tests": [
+    "lua/dark_canary_test.lua#the primary payload matches the fixture the collector decodes",
+    "lua/dark_canary_test.lua#the shadow payload matches the fixture the collector decodes"
+   ]
+  },
+  "developer-tooling.edge-hook-tests.003": {
+   "file": "specs/developer-tooling/edge-hook-tests/edge-hook-test-suite.feature",
+   "fingerprint": "040d78955d08",
+   "human": false,
+   "rule": "devtooling.edge-hook-tests.fixture-refresh-on-request",
+   "source": "lua/dark_canary_test.lua#fixture",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "noise-suppression.default-rules.001": {
+   "file": "specs/noise-suppression/default-rules/default-noise-rules.feature",
+   "fingerprint": "821fc5ff6c53",
+   "human": false,
+   "rule": "noise.defaults.ignore-per-request-headers",
+   "source": "internal/noise/noise.go#Default",
+   "status": "verified",
+   "test": "internal/noise/noise_test.go#TestUnmatchedPathsAreNeverSuppressed",
+   "tests": [
+    "internal/noise/noise_test.go#TestUnmatchedPathsAreNeverSuppressed",
+    "internal/noise/noise_test.go#TestRulesetSuppressesThroughTheEngine"
+   ]
+  },
+  "noise-suppression.default-rules.002": {
+   "file": "specs/noise-suppression/default-rules/default-noise-rules.feature",
+   "fingerprint": "821fc5ff6c53",
+   "human": false,
+   "rule": "noise.defaults.never-hide-status-or-body",
+   "source": "internal/noise/noise.go#Default",
+   "status": "verified",
+   "test": "internal/noise/noise_test.go#TestUnmatchedPathsAreNeverSuppressed",
+   "tests": [
+    "internal/noise/noise_test.go#TestUnmatchedPathsAreNeverSuppressed"
+   ]
+  },
+  "noise-suppression.normalisations.001": {
+   "file": "specs/noise-suppression/normalisations/noise-value-normalisations.feature",
+   "fingerprint": "45cbd4faf30c",
+   "human": false,
+   "rule": "noise.normalise.agreeing-values-not-counted",
+   "source": "internal/noise/noise.go#compare",
+   "status": "verified",
+   "test": "internal/noise/noise_test.go#TestEqualValuesAreNeverCountedAsSuppressed",
+   "tests": [
+    "internal/noise/noise_test.go#TestEqualValuesAreNeverCountedAsSuppressed"
+   ]
+  },
+  "noise-suppression.path-matching.001": {
+   "file": "specs/noise-suppression/path-matching/noise-rule-path-matching.feature",
+   "fingerprint": "b7573cff17e4",
+   "human": false,
+   "rule": "noise.paths.body-keys-match-case-insensitively",
+   "source": "internal/noise/noise.go#matchGlob",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "noise-suppression.rule-files.001": {
+   "file": "specs/noise-suppression/rule-files/operator-noise-rule-files.feature",
+   "fingerprint": "24aaa9a98bbe",
+   "human": false,
+   "rule": "noise.rule-files.reject-unusable-rules",
+   "source": "internal/noise/noise.go#Load",
+   "status": "verified",
+   "test": "internal/noise/noise_test.go#TestLoadRejectsRulesThatDoNothing",
+   "tests": [
+    "internal/noise/noise_test.go#TestLoadRejectsRulesThatDoNothing"
+   ]
+  },
+  "noise-suppression.rule-files.002": {
+   "file": "specs/noise-suppression/rule-files/operator-noise-rule-files.feature",
+   "fingerprint": "24aaa9a98bbe",
+   "human": false,
+   "rule": "noise.rule-files.missing-file-refused",
+   "source": "internal/noise/noise.go#Load",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "reporting.agreement-summary.001": {
+   "file": "specs/reporting/agreement-summary/agreement-summary.feature",
+   "fingerprint": "549304b28afc",
+   "human": false,
+   "rule": "reporting.summary.empty-is-not-agreement",
+   "source": "internal/report/report.go#Text",
+   "status": "verified",
+   "test": "internal/report/report_test.go#TestNoPairsSaysSoRatherThanClaimingAgreement",
+   "tests": [
+    "internal/report/report_test.go#TestNoPairsSaysSoRatherThanClaimingAgreement"
+   ]
+  },
+  "reporting.severity-ranking.001": {
+   "file": "specs/reporting/severity-ranking/severity-ranking.feature",
+   "fingerprint": "d367419953b8",
+   "human": false,
+   "rule": "reporting.groups.severity-by-kind",
+   "source": "internal/report/report.go#severityOf",
+   "status": "verified",
+   "test": "internal/report/report_test.go#TestSeverityOutranksFrequency",
+   "tests": [
+    "internal/report/report_test.go#TestSeverityOutranksFrequency"
+   ]
+  },
+  "reporting.severity-ranking.002": {
+   "file": "specs/reporting/severity-ranking/severity-ranking.feature",
+   "fingerprint": "549304b28afc",
+   "human": false,
+   "rule": "reporting.text.one-line-per-finding",
+   "source": "internal/report/report.go#Text",
+   "status": "verified",
+   "test": "internal/report/report_test.go#TestTextRendersOneLinePerGroup",
+   "tests": [
+    "internal/report/report_test.go#TestTextRendersOneLinePerGroup"
+   ]
+  },
+  "response-comparison.value-equality.001": {
+   "file": "specs/response-comparison/value-equality/value-equality.feature",
+   "fingerprint": "34fa6276f0d1",
+   "human": false,
+   "rule": "response.value-equality.formatting-and-key-order-ignored",
+   "source": "internal/diff/diff.go#decodeJSON",
+   "status": "verified",
+   "test": "internal/diff/diff_test.go#TestKeyOrderIsNotADifference",
+   "tests": [
+    "internal/diff/diff_test.go#TestKeyOrderIsNotADifference",
+    "internal/diff/diff_test.go#TestWhitespaceIsNotADifference",
+    "internal/diff/diff_test.go#FuzzDiffBodies"
+   ]
+  },
+  "response-comparison.value-equality.002": {
+   "file": "specs/response-comparison/value-equality/value-equality.feature",
+   "fingerprint": "35bde06ebd28",
+   "human": false,
+   "rule": "response.value-equality.numbers-compare-numerically",
+   "source": "internal/diff/diff.go#scalarEqual",
+   "status": "verified",
+   "test": "internal/diff/diff_test.go#TestNumbersCompareNumerically",
+   "tests": [
+    "internal/diff/diff_test.go#TestNumbersCompareNumerically"
+   ]
+  },
+  "response-comparison.value-equality.003": {
+   "file": "specs/response-comparison/value-equality/value-equality.feature",
+   "fingerprint": "35bde06ebd28",
+   "human": false,
+   "rule": "response.value-equality.large-integer-precision",
+   "source": "internal/diff/diff.go#scalarEqual",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "safety-and-access.access-token.001": {
+   "file": "specs/safety-and-access/access-token/access-token.feature",
+   "fingerprint": "3b1ca268b372",
+   "human": false,
+   "rule": "access.token.loopback-needs-no-token",
+   "source": "cmd/dark-canary/config.go#parseFlags",
+   "status": "verified",
+   "test": "cmd/dark-canary/main_test.go#TestNoTokenIsFineOnLoopback",
+   "tests": [
+    "cmd/dark-canary/main_test.go#TestNoTokenIsFineOnLoopback"
+   ]
+  },
+  "safety-and-access.data-scrubbing.001": {
+   "file": "specs/safety-and-access/data-scrubbing/edge-request-body-scrubbing.feature",
+   "fingerprint": "2217a582a96b",
+   "human": false,
+   "rule": "edge.scrubbing.secret-keys-redacted-in-request-body",
+   "source": "lua/dark_canary.lua#request_body",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#scrub_args keys are redacted in a form-encoded request body",
+   "tests": [
+    "lua/dark_canary_test.lua#scrub_args keys are redacted in a form-encoded request body",
+    "lua/dark_canary_test.lua#a percent-encoded form key is redacted as the key it decodes to",
+    "lua/dark_canary_test.lua#the kit's default scrub_args apply when none are configured",
+    "lua/dark_canary_test.lua#the request body is captured, scrubbed and base64-encoded",
+    "lua/dark_canary_test.lua#scrub_args keys reach the JSON scrubber too"
+   ]
+  },
+  "safety-and-access.data-scrubbing.002": {
+   "file": "specs/safety-and-access/data-scrubbing/edge-request-body-scrubbing.feature",
+   "fingerprint": "2217a582a96b",
+   "human": false,
+   "rule": "edge.scrubbing.multipart-body-withheld",
+   "source": "lua/dark_canary.lua#request_body",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#a multipart request body is not shipped",
+   "tests": [
+    "lua/dark_canary_test.lua#a multipart request body is not shipped"
+   ]
+  },
+  "safety-and-access.data-scrubbing.003": {
+   "file": "specs/safety-and-access/data-scrubbing/edge-request-body-scrubbing.feature",
+   "fingerprint": "2217a582a96b",
+   "human": false,
+   "rule": "edge.scrubbing.body-scrubbed-then-capped",
+   "source": "lua/dark_canary.lua#request_body",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#a request body over max_body is cut at it",
+   "tests": [
+    "lua/dark_canary_test.lua#a request body over max_body is cut at it",
+    "lua/dark_canary_test.lua#the request body is scrubbed before it is cut",
+    "lua/dark_canary_test.lua#max_body = 0 captures no request body on either side"
+   ]
+  },
+  "safety-and-access.data-scrubbing.004": {
+   "file": "specs/safety-and-access/data-scrubbing/sensitive-data-scrubbing.feature",
+   "fingerprint": "5ac8afc70e74",
+   "human": false,
+   "rule": "safety.scrubbing.object-and-array-values-not-redacted",
+   "source": "internal/safety/safety.go#NewScrubber",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "safety-and-access.data-scrubbing.005": {
+   "file": "specs/safety-and-access/data-scrubbing/sensitive-data-scrubbing.feature",
+   "fingerprint": "5ac8afc70e74",
+   "human": false,
+   "rule": "safety.scrubbing.escaped-quotes-do-not-swallow-body",
+   "source": "internal/safety/safety.go#NewScrubber",
+   "status": "verified",
+   "test": "internal/safety/safety_test.go#TestScrubberHandlesEscapedQuotesWithoutRunningOn",
+   "tests": [
+    "internal/safety/safety_test.go#TestScrubberHandlesEscapedQuotesWithoutRunningOn"
+   ]
+  },
+  "safety-and-access.shadow-isolation.001": {
+   "file": "specs/safety-and-access/shadow-isolation/shadow-isolation.feature",
+   "fingerprint": "72cb8296445f",
+   "human": false,
+   "rule": "isolation.shadow.redirects-not-followed",
+   "source": "cmd/dark-canary/proxy.go#newProxy",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "traffic-mirroring.capture-shipping.001": {
+   "file": "specs/traffic-mirroring/capture-shipping/edge-capture-shipping.feature",
+   "fingerprint": "ffc3f851df98",
+   "human": false,
+   "rule": "edge.shipping.collector-token-header",
+   "source": "lua/dark_canary.lua#ship",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#the collector token is sent when configured",
+   "tests": [
+    "lua/dark_canary_test.lua#the collector token is sent when configured",
+    "lua/dark_canary_test.lua#no token configured sends no token header"
+   ]
+  },
+  "traffic-mirroring.capture-shipping.002": {
+   "file": "specs/traffic-mirroring/capture-shipping/edge-capture-shipping.feature",
+   "fingerprint": "ffc3f851df98",
+   "human": false,
+   "rule": "edge.shipping.token-with-line-break-refused",
+   "source": "lua/dark_canary.lua#ship",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#a token with a line break is refused rather than sent",
+   "tests": [
+    "lua/dark_canary_test.lua#a token with a line break is refused rather than sent"
+   ]
+  },
+  "traffic-mirroring.capture-shipping.003": {
+   "file": "specs/traffic-mirroring/capture-shipping/edge-capture-shipping.feature",
+   "fingerprint": "136a23414552",
+   "human": false,
+   "rule": "edge.shipping.tls-certificate-verified",
+   "source": "lua/dark_canary.lua#post",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#tls verifies the collector's certificate for its name",
+   "tests": [
+    "lua/dark_canary_test.lua#tls verifies the collector's certificate for its name",
+    "lua/dark_canary_test.lua#a failed tls handshake sends nothing, token included"
+   ]
+  },
+  "traffic-mirroring.capture-shipping.004": {
+   "file": "specs/traffic-mirroring/capture-shipping/edge-capture-shipping.feature",
+   "fingerprint": "136a23414552",
+   "human": false,
+   "rule": "edge.shipping.failed-tls-handshake-sends-nothing",
+   "source": "lua/dark_canary.lua#post",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#a failed tls handshake sends nothing, token included",
+   "tests": [
+    "lua/dark_canary_test.lua#a failed tls handshake sends nothing, token included"
+   ]
+  },
+  "traffic-mirroring.capture-shipping.005": {
+   "file": "specs/traffic-mirroring/capture-shipping/edge-capture-shipping.feature",
+   "fingerprint": "136a23414552",
+   "human": false,
+   "rule": "edge.shipping.collector-failures-logged",
+   "source": "lua/dark_canary.lua#post",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#an unreachable collector is logged, not raised",
+   "tests": [
+    "lua/dark_canary_test.lua#an unreachable collector is logged, not raised",
+    "lua/dark_canary_test.lua#a capture the collector refuses is logged",
+    "lua/dark_canary_test.lua#an accepted capture logs nothing"
+   ]
+  },
+  "traffic-mirroring.edge-capture-hook.001": {
+   "file": "specs/traffic-mirroring/edge-capture-hook/edge-capture.feature",
+   "fingerprint": "a0ea20af19a7",
+   "human": false,
+   "rule": "edge.config.partial-collector-override-keeps-defaults",
+   "source": "lua/dark_canary.lua#merge",
+   "status": "verified",
+   "test": "lua/dark_canary_test.lua#a partial collector override keeps the other collector fields",
+   "tests": [
+    "lua/dark_canary_test.lua#a partial collector override keeps the other collector fields",
+    "lua/dark_canary_test.lua#the capture is stamped with its side and shipped to the collector"
+   ]
+  }
+ },
+ "taxonomy": {
+  "domains": [
+   {
+    "areas": [
+     {
+      "description": "The nginx Lua hook records primary and shadow responses at the edge and ships them to the collector in the shape it decodes.",
+      "slug": "edge-capture-hook",
+      "title": "Edge capture hook"
+     },
+     {
+      "description": "dark-canary sits at the edge itself, serving the client from the primary and mirroring the request to the shadow with no nginx or Lua.",
+      "slug": "proxy-mode",
+      "title": "Built-in proxy mode"
+     },
+     {
+      "description": "Which requests get mirrored: sample rate, idempotent-methods-only, in-flight limits and shadow timeouts.",
+      "slug": "mirror-sampling",
+      "title": "Mirror decision and sampling"
+     },
+     {
+      "description": "How captured requests and responses, with headers and bodies, are packaged and posted to the collector with authentication.",
+      "slug": "capture-shipping",
+      "title": "Capture shipping"
+     }
+    ],
+    "description": "Getting a copy of production traffic to the shadow deployment while the user is served by the primary.",
+    "slug": "traffic-mirroring",
+    "title": "Traffic Mirroring"
+   },
+   {
+    "areas": [
+     {
+      "description": "The captures endpoint accepts, validates and rejects malformed or disallowed captures before they enter the pipeline.",
+      "slug": "capture-intake",
+      "title": "Capture intake"
+     },
+     {
+      "description": "Correlating a primary and a shadow capture by correlation id, never pairing one side with itself.",
+      "slug": "pairing",
+      "title": "Request pairing"
+     },
+     {
+      "description": "Unpaired captures expire and the buffer stays bounded, evicting the oldest and saying what it dropped when a shadow goes silent.",
+      "slug": "buffer-limits",
+      "title": "Buffer limits and expiry"
+     },
+     {
+      "description": "When comparison stalls, pairs are dropped rather than blocking, so pressure never reaches the edge.",
+      "slug": "back-pressure",
+      "title": "Back-pressure handling"
+     }
+    ],
+    "description": "Receiving captures and pairing each primary response with its shadow counterpart so they can be compared.",
+    "slug": "capture-collection",
+    "title": "Capture Collection"
+   },
+   {
+    "areas": [
+     {
+      "description": "Compares status, headers and JSON bodies by structure rather than text, pointing at each divergence by JSON path.",
+      "slug": "structural-diff",
+      "title": "Structural diff"
+     },
+     {
+      "description": "Labels each divergence by kind (status, missing field, type change, value change and so on) to show how serious it is.",
+      "slug": "difference-kinds",
+      "title": "Difference classification"
+     },
+     {
+      "description": "Equality rules such as numbers comparing numerically and key order not mattering.",
+      "slug": "value-equality",
+      "title": "Value equality"
+     }
+    ],
+    "description": "Deciding structurally whether the shadow answered the same way the primary did.",
+    "slug": "response-comparison",
+    "title": "Response Comparison"
+   },
+   {
+    "areas": [
+     {
+      "description": "The built-in rules a fresh install starts with for timestamps, IDs and other differences that always vary.",
+      "slug": "default-rules",
+      "title": "Default ruleset"
+     },
+     {
+      "description": "Loading YAML rulesets that are merged over the defaults, with later rules winning, so operators can tune without a redeploy.",
+      "slug": "rule-files",
+      "title": "Operator rule files"
+     },
+     {
+      "description": "Glob matching of rules to locations in headers and bodies, case-insensitive for header names.",
+      "slug": "path-matching",
+      "title": "Path matching"
+     },
+     {
+      "description": "Ignore, round floats, compare as sorted sets or by length, so ordering and precision noise stops counting as a difference.",
+      "slug": "normalisations",
+      "title": "Value normalisations"
+     }
+    ],
+    "description": "Declaratively ignoring the differences that are expected, so a reported diff means something.",
+    "slug": "noise-suppression",
+    "title": "Noise Suppression"
+   },
+   {
+    "areas": [
+     {
+      "description": "Compared pairs, identical pairs, suppressed differences and the agreement rate quoted when deciding go or no-go.",
+      "slug": "agreement-summary",
+      "title": "Agreement summary"
+     },
+     {
+      "description": "Groups differences by kind and path, ranks them by severity and then by frequency, and keeps an example of each.",
+      "slug": "severity-ranking",
+      "title": "Severity grouping and ranking"
+     },
+     {
+      "description": "The report endpoint renders the summary as terminal text or JSON.",
+      "slug": "report-formats",
+      "title": "Text and JSON reports"
+     },
+     {
+      "description": "A single embedded page with no build step that shows the report in a browser.",
+      "slug": "dashboard",
+      "title": "Web dashboard"
+     },
+     {
+      "description": "The stats endpoint accounts for every capture (paired, expired, dropped, refused), which answers why nothing is being compared.",
+      "slug": "pipeline-stats",
+      "title": "Pipeline statistics"
+     }
+    ],
+    "description": "Telling the operator whether the shadow behaves the same as the primary, and why not if it doesn't.",
+    "slug": "reporting",
+    "title": "Reporting"
+   },
+   {
+    "areas": [
+     {
+      "description": "A shadow that is down, slow or wrong can never change or delay the response the user gets.",
+      "slug": "shadow-isolation",
+      "title": "Shadow isolation"
+     },
+     {
+      "description": "Non-idempotent requests are refused by default; write mirroring has to be enabled on purpose and raises a warning.",
+      "slug": "read-only-mirroring",
+      "title": "Read-only mirroring"
+     },
+     {
+      "description": "A file-based switch that stops mirroring and ingestion without stopping traffic, even when the control plane is down.",
+      "slug": "kill-switch",
+      "title": "Kill switch"
+     },
+     {
+      "description": "Configured fields in bodies, forms and headers are redacted, and bodies are capped in size, at both the edge and on arrival.",
+      "slug": "data-scrubbing",
+      "title": "Sensitive data scrubbing"
+     },
+     {
+      "description": "A constant-time token check guards every data endpoint, and the tool refuses to listen beyond loopback without a token.",
+      "slug": "access-token",
+      "title": "Access token and exposure"
+     }
+    ],
+    "description": "Guard rails that keep the shadow away from users and data, and keep the tool from being exposed.",
+    "slug": "safety-and-access",
+    "title": "Safety and Access Control"
+   },
+   {
+    "areas": [
+     {
+      "description": "Command-line flags for upstreams, rulesets, safety settings and listeners, where unsafe or inconsistent values are refused at startup.",
+      "slug": "startup-configuration",
+      "title": "Startup configuration"
+     },
+     {
+      "description": "Distinct sysexits-style exit codes, so a supervisor can tell a usage error from a bad ruleset or a runtime failure.",
+      "slug": "exit-codes",
+      "title": "Exit codes"
+     },
+     {
+      "description": "The healthz endpoint, periodic sweeping, and graceful shutdown of every server on signal.",
+      "slug": "health-and-shutdown",
+      "title": "Health check and shutdown"
+     }
+    ],
+    "description": "How the service is configured, started, health-checked and stopped.",
+    "slug": "configuration-and-lifecycle",
+    "title": "Configuration and Lifecycle"
+   },
+   {
+    "areas": [
+     {
+      "description": "Make targets to build, test, run, format, analyze, install and clean the binary.",
+      "slug": "build-and-test",
+      "title": "Build and test commands"
+     },
+     {
+      "description": "A plain Lua test suite for the capture hook that runs on any Lua 5.1+ without luarocks.",
+      "slug": "edge-hook-tests",
+      "title": "Edge hook test suite"
+     },
+     {
+      "description": "Installing the pre-commit hook and running every pre-commit check over the whole tree.",
+      "slug": "dev-setup-and-lint",
+      "title": "Dev setup and lint"
+     },
+     {
+      "description": "A digest-pinned multi-stage build that produces a minimal scratch image running as a non-root user.",
+      "slug": "container-image",
+      "title": "Container image"
+     }
+    ],
+    "description": "Building, testing, linting and shipping dark-canary.",
+    "slug": "developer-tooling",
+    "title": "Developer Tooling and Packaging"
+   }
+  ]
+ }
+}

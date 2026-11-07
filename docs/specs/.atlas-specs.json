@@ -1,0 +1,249 @@
+{
+ "excluded": {
+  "stylesheets/extra": [
+   {
+    "candidate": "Header translucency, blur and hairline divider; shadow on scroll",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "docs/stylesheets/extra.css#.md-header"
+   },
+   {
+    "candidate": "Heading weights, letter-spacing and margins",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "docs/stylesheets/extra.css#.md-typeset h1"
+   },
+   {
+    "candidate": "Rounded bordered code blocks",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "docs/stylesheets/extra.css#.md-typeset .highlight"
+   },
+   {
+    "candidate": "Uppercase small table headers",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "docs/stylesheets/extra.css#.md-typeset table:not([class]) th"
+   },
+   {
+    "candidate": "Pill buttons with hover lift and indigo glow",
+    "covered_by": "docs.theme.single-shared-palette",
+    "reason": "DUPLICATE_OF",
+    "source": "docs/stylesheets/extra.css#.md-typeset .md-button"
+   },
+   {
+    "candidate": "Home hero gradient title and tagline layout",
+    "covered_by": "docs.theme.single-shared-palette",
+    "reason": "DUPLICATE_OF",
+    "source": "docs/stylesheets/extra.css#.md-typeset .hero h1"
+   },
+   {
+    "candidate": "Feature card depth, hover lift and amber icon colour",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "docs/stylesheets/extra.css#.md-typeset .grid.cards > ul > li"
+   },
+   {
+    "candidate": "Tab link opacity, sidebar title/active link weights, footer colours",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "docs/stylesheets/extra.css#.md-tabs__link"
+   },
+   {
+    "candidate": "Smooth scrolling for in-page anchors",
+    "covered_by": "",
+    "reason": "TRIVIAL",
+    "source": "docs/stylesheets/extra.css#html"
+   }
+  ]
+ },
+ "lifted": {
+  "stylesheets/extra": []
+ },
+ "retired": [],
+ "scenarios": {
+  "docs.documentation-site.site-theme.001": {
+   "file": "docs/specs/documentation-site/site-theme/docs-site-theme.feature",
+   "fingerprint": "2151123fb2f9",
+   "human": false,
+   "rule": "docs.theme.single-shared-palette",
+   "source": "docs/stylesheets/extra.css#:root",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "docs.documentation-site.site-theme.002": {
+   "file": "docs/specs/documentation-site/site-theme/docs-site-theme.feature",
+   "fingerprint": "2151123fb2f9",
+   "human": false,
+   "rule": "docs.theme.no-network-assets",
+   "source": "docs/stylesheets/extra.css#:root",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "docs.documentation-site.site-theme.003": {
+   "file": "docs/specs/documentation-site/site-theme/docs-site-theme.feature",
+   "fingerprint": "433084a194b6",
+   "human": false,
+   "rule": "docs.theme.legible-in-both-schemes",
+   "source": "docs/stylesheets/extra.css#[data-md-color-scheme=\"slate\"]",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "docs.documentation-site.site-theme.004": {
+   "file": "docs/specs/documentation-site/site-theme/docs-site-theme.feature",
+   "fingerprint": "c702704e5aae",
+   "human": false,
+   "rule": "docs.theme.no-borrowed-logo",
+   "source": "docs/stylesheets/extra.css#.md-header__button.md-logo",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  },
+  "docs.documentation-site.site-theme.005": {
+   "file": "docs/specs/documentation-site/site-theme/docs-site-theme.feature",
+   "fingerprint": "721086d36c47",
+   "human": false,
+   "rule": "docs.theme.wide-tables-readable-on-narrow-screens",
+   "source": "docs/stylesheets/extra.css#.md-typeset table:not([class])",
+   "status": "inferred",
+   "test": "",
+   "tests": []
+  }
+ },
+ "taxonomy": {
+  "domains": [
+   {
+    "areas": [
+     {
+      "description": "Capturing requests and responses at the nginx edge for mirroring.",
+      "slug": "edge-capture",
+      "title": "Edge capture"
+     },
+     {
+      "description": "Receiving and decoding captured traffic pairs for comparison.",
+      "slug": "collection",
+      "title": "Collection"
+     },
+     {
+      "description": "Sending mirrored requests to the shadow deployment and recording its replies.",
+      "slug": "shadow-replay",
+      "title": "Shadow replay"
+     }
+    ],
+    "description": "Copying live production requests to a shadow deployment without the user noticing.",
+    "slug": "traffic-mirroring",
+    "title": "Traffic mirroring"
+   },
+   {
+    "areas": [
+     {
+      "description": "Structural comparison of response payloads between production and shadow.",
+      "slug": "body-diffing",
+      "title": "Body diffing"
+     },
+     {
+      "description": "Comparing status codes and response headers across the two paths.",
+      "slug": "status-and-headers",
+      "title": "Status and headers"
+     }
+    ],
+    "description": "Deciding whether the shadow's responses match production's.",
+    "slug": "response-comparison",
+    "title": "Response comparison"
+   },
+   {
+    "areas": [
+     {
+      "description": "Ignoring timestamps, IDs and other values that legitimately change per request.",
+      "slug": "volatile-values",
+      "title": "Volatile values"
+     },
+     {
+      "description": "Tolerating reordered collections and float precision differences.",
+      "slug": "ordering-and-precision",
+      "title": "Ordering and precision"
+     },
+     {
+      "description": "Authoring and loading the declarative noise rule files.",
+      "slug": "rule-configuration",
+      "title": "Rule configuration"
+     }
+    ],
+    "description": "Declarative rules that hide expected differences so remaining diffs are meaningful.",
+    "slug": "noise-suppression",
+    "title": "Noise suppression"
+   },
+   {
+    "areas": [
+     {
+      "description": "The overall pass/fail judgement on shadow equivalence.",
+      "slug": "verdicts",
+      "title": "Verdicts"
+     },
+     {
+      "description": "Readable reports of the differences that survived suppression.",
+      "slug": "diff-reports",
+      "title": "Diff reports"
+     }
+    ],
+    "description": "Telling the operator whether the shadow behaves identically.",
+    "slug": "reporting",
+    "title": "Reporting"
+   },
+   {
+    "areas": [
+     {
+      "description": "Keeping shadow failures, latency and errors away from the user response.",
+      "slug": "user-path-isolation",
+      "title": "User path isolation"
+     },
+     {
+      "description": "Bounding the load and resources the mirroring path may consume.",
+      "slug": "resource-limits",
+      "title": "Resource limits"
+     }
+    ],
+    "description": "Guaranteeing the shadow path never affects the user's response.",
+    "slug": "safety",
+    "title": "Safety"
+   },
+   {
+    "areas": [
+     {
+      "description": "Branding, colour palette, typography and layout styling of the docs and splash page.",
+      "slug": "site-theme",
+      "title": "Site theme"
+     },
+     {
+      "description": "Getting-started, architecture and noise-rule documentation content.",
+      "slug": "guides",
+      "title": "Guides"
+     }
+    ],
+    "description": "The published product documentation and its look and feel.",
+    "slug": "documentation-site",
+    "title": "Documentation site"
+   },
+   {
+    "areas": [
+     {
+      "description": "Compiling the binary and running unit, Lua and end-to-end tests.",
+      "slug": "build-and-test",
+      "title": "Build and test"
+     },
+     {
+      "description": "Continuous integration checks, hooks and the release pipeline.",
+      "slug": "release-and-ci",
+      "title": "Release and CI"
+     }
+    ],
+    "description": "Building, testing, releasing and maintaining the project.",
+    "slug": "operations",
+    "title": "Operations"
+   }
+  ]
+ }
+}
