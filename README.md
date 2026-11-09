@@ -1,5 +1,11 @@
 # dark-canary
 
+> [!WARNING]
+> **This project is retired** and no longer maintained. If you need something
+> for this, [mroki](https://github.com/pedrobarco/mroki) mirrors production
+> traffic to a shadow deployment and compares the responses. It is a separate
+> project, actively developed, and worth a look.
+
 [![CI](https://github.com/fabiocicerchia/dark-canary/actions/workflows/code-quality.yml/badge.svg)](https://github.com/fabiocicerchia/dark-canary/actions/workflows/code-quality.yml)
 [![Security](https://github.com/fabiocicerchia/dark-canary/actions/workflows/security.yml/badge.svg)](https://github.com/fabiocicerchia/dark-canary/actions/workflows/security.yml)
 [![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
